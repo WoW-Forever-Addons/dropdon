@@ -1,0 +1,39 @@
+## Interface: 16001
+## Title: |cff3fa9f5Drop|rdon
+## Notes: Dungeon and raid loot for WoW Forever: every instance with its bosses and what they drop, filtered to what you can use.
+## Notes-deDE: Dungeon- und Schlachtzugsbeute für WoW Forever: jede Instanz mit ihren Bossen und dem, was sie droppen, gefiltert auf das, was du nutzen kannst.
+## Author: DonCoohd
+## Version: 0.7.0
+## Category: Inventory
+## Category-deDE: Inventar
+## IconTexture: Interface\Icons\INV_Misc_Bag_10
+## SavedVariables: DropdonDB
+## AddonCompartmentFunc: Dropdon_OnAddonCompartmentClick
+## X-License: MIT License, Copyright (c) 2026 DonCoohd
+## X-Curse-Project-ID: 1782347
+
+Libs\LibStub\LibStub.lua
+Libs\DonCore\DonCore.lua
+Libs\DonCore\Style.lua
+Libs\DonCore\Settings.lua
+Libs\DonCore\MinimapButton.lua
+Libs\DonCore\Kit.lua
+Libs\DonCore\Options.lua
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\frFR.lua
+Locales\esES.lua
+Locales\esMX.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\koKR.lua
+Locales\zhTW.lua
+Core.lua
+Data\Drops.lua
+Filter.lua
+Window.lua
+Mini.lua
+Current.lua
+MinimapButton.lua
+Tooltip.lua
+Options.lua
