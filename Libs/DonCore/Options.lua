@@ -1,4 +1,4 @@
-local O = LibStub("DonCore-1.0"):NewModule("Options", 4)
+local O = LibStub("DonCore-1.0"):NewModule("Options", 5)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Options" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 3"): one options window for every Don addon
@@ -24,11 +24,14 @@ local O = LibStub("DonCore-1.0"):NewModule("Options", 4)
 -- (minor 4, 02.11.2026, Daniel: "Maßstab 80 % für alle Kit-Fenster, im Optionsfenster einstellbar von 60 bis 110 %") a last
 -- page "General" with the window scale of every Kit window (Kit minor 13), kept in the SavedVariables of every Don addon
 -- (donWindowScale, donWindowScaleAt: the newest one wins at login). O.GENERAL is its id.
+-- (minor 5, 04.11.2026, Era-Test) an item made by DonCore (item.donCommon, e.g. MinimapButton's ns.MinimapOption()) runs
+-- its onChange(value) here after spec.changed, so an addon with its own Register spec needs no code for it (FromSettings
+-- specs already run onChange in their changed()).
 -- Needs Kit (minor 2). Only own frames, no hooks, no SavedVariables (place and size kept for the session).
 ---------------------------------------------------------------------------
 if not O then return end
 local Core = LibStub("DonCore-1.0")
-O.VERSION = 4
+O.VERSION = 5
 O.addons = O.addons or {}   -- id -> spec (kept across upgrades)
 O.ids = O.ids or {}         -- ids in the order they registered
 O.store = O.store or {}     -- the window's place and size for the session
@@ -228,7 +231,14 @@ local function T(spec, s)
 end
 local function DB(spec) return (spec.db and Safe("db", spec.db)) or {} end
 local function Default(spec, key) return spec.default and Safe("default", spec.default, key) end
-local function Changed(spec, key) if spec.changed then Safe("changed", spec.changed, key) end end
+local Index
+local function Changed(spec, key)
+  if spec.changed then Safe("changed", spec.changed, key) end
+  -- (minor 5) a DonCore item (the minimap switch) refreshes itself
+  if spec.fromSettings or not Index then return end
+  local item = Index(spec).items[key]
+  if item and item.donCommon and item.onChange then Safe("onChange " .. tostring(key), item.onChange, DB(spec)[key]) end
+end
 local function Plain(s) return (tostring(s or ""):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) end
 
 -- the addon's icon from its toc (## IconTexture), shown on the right when a tab has no picture of its own
@@ -261,7 +271,7 @@ function O.Register(id, spec)
 end
 
 -- the options of pages() by key, the page buttons by the section they stand in, the tools by name
-local function Index(spec)
+function Index(spec)
   if spec._index then return spec._index end
   local ix = { items = {}, buttons = {}, tools = {} }
   for _, page in ipairs((spec.pages and Safe("pages", spec.pages)) or {}) do
@@ -327,7 +337,7 @@ function O.FromSettings(spec, ns)
       if ns.RefreshSettingsUI then Safe("refresh", ns.RefreshSettingsUI) end
     end,
     T = L, labels = function(s) return L(s) end,
-    status = spec.status, help = spec.help,
+    status = spec.status, help = spec.help, fromSettings = true,
   })
 end
 

@@ -118,3 +118,11 @@ L["More"] = "Ещё"
 L["Search instance"] = "Поиск подземелья"
 L["Window width"] = "Ширина окна"
 L["Drag: width of the window."] = "Перетащите: ширина окна."
+-- (04.11.2026, Era-Test) the state line in the minimap button's tooltip
+L["You are here: %s"] = "Вы здесь: %s"
+L["Not in a dungeon or raid"] = "Не в подземелье и не в рейде"
+-- (04.11.2026, Era-Test) the minimap button's menu on right click
+L["Loot window"] = "Окно добычи"
+L["Mini window"] = "Мини-окно"
+L["All options"] = "Все настройки"
+L["Left click: window. Right click: menu. Drag: move."] = "ЛКМ: окно. ПКМ: меню. Перетаскивание: переместить."

@@ -118,3 +118,11 @@ L["More"] = "기타"
 L["Search instance"] = "인스턴스 검색"
 L["Window width"] = "창 너비"
 L["Drag: width of the window."] = "끌기: 창 너비."
+-- (04.11.2026, Era-Test) the state line in the minimap button's tooltip
+L["You are here: %s"] = "현재 위치: %s"
+L["Not in a dungeon or raid"] = "던전이나 공격대 안이 아닙니다"
+-- (04.11.2026, Era-Test) the minimap button's menu on right click
+L["Loot window"] = "전리품 창"
+L["Mini window"] = "미니 창"
+L["All options"] = "모든 설정"
+L["Left click: window. Right click: menu. Drag: move."] = "왼쪽 클릭: 창. 오른쪽 클릭: 메뉴. 드래그: 이동."

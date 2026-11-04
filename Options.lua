@@ -27,8 +27,7 @@ local PAGES = {
   } },
   { title = "General", tip = "Minimap button, instance selection and tooltip line.", items = {
     { header = "Dropdon" },
-    { key = "minimapButton", name = "Minimap button", tip = "The button on the minimap. Left click: window. Right click: small window. Drag: move.",
-      onChange = function() if ns.RefreshMinimapButton then ns.RefreshMinimapButton() end end },
+    ns.MinimapOption(), -- (04.11.2026, Era-Test) the shared switch of DonCore's MinimapButton 3, its texts translated there
     { key = "autoSelect", name = "Select the instance you walk into", tip = "When you enter a dungeon or raid, the windows show its bosses and loot." },
     { key = "tooltip", name = "Drop line in item tooltips", tip = "Adds the instance and boss to the tooltip of items that drop there. /dd tooltip" },
   } },

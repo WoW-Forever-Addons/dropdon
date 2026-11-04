@@ -118,3 +118,11 @@ L["More"] = "更多"
 L["Search instance"] = "搜尋副本"
 L["Window width"] = "視窗寬度"
 L["Drag: width of the window."] = "拖曳：視窗寬度。"
+-- (04.11.2026, Era-Test) the state line in the minimap button's tooltip
+L["You are here: %s"] = "你在這裡：%s"
+L["Not in a dungeon or raid"] = "不在地城或團隊副本中"
+-- (04.11.2026, Era-Test) the minimap button's menu on right click
+L["Loot window"] = "戰利品視窗"
+L["Mini window"] = "迷你視窗"
+L["All options"] = "所有選項"
+L["Left click: window. Right click: menu. Drag: move."] = "左鍵點擊：視窗。右鍵點擊：選單。拖曳：移動。"

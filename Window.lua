@@ -105,9 +105,11 @@ local function Passing(ids)
   return n
 end
 
--- the right column of a boss row: fitting items gold, the total quiet ("4/6")
+-- the right column of a boss row: fitting items gold, the total quiet ("4 / 6")
+-- (04.11.2026, Era-Test) the format of Kit.Fraction ("a / b", a space on each side of the slash); Kit.Fraction has no
+-- colours, so the two colours go around its parts here
 local function FitText(fit, all)
-  return Hex(fit > 0 and C.txGold or C.quiet) .. fit .. "|r" .. Hex(C.quiet) .. "/" .. all .. "|r"
+  return Hex(fit > 0 and C.txGold or C.quiet) .. fit .. "|r" .. Hex(C.quiet) .. " / " .. all .. "|r"
 end
 
 ---------------------------------------------------------------------------

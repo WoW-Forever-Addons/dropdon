@@ -3,10 +3,10 @@
 ## Notes: Dungeon and raid loot for WoW Forever: every instance with its bosses and what they drop, filtered to what you can use.
 ## Notes-deDE: Dungeon- und Schlachtzugsbeute für WoW Forever: jede Instanz mit ihren Bossen und dem, was sie droppen, gefiltert auf das, was du nutzen kannst.
 ## Author: DonCoohd
-## Version: 0.7.0
+## Version: 0.8.0
 ## Category: Inventory
 ## Category-deDE: Inventar
-## IconTexture: Interface\Icons\INV_Misc_Bag_10
+## IconTexture: Interface\AddOns\Dropdon\Media\minimap
 ## SavedVariables: DropdonDB
 ## AddonCompartmentFunc: Dropdon_OnAddonCompartmentClick
 ## X-License: MIT License, Copyright (c) 2026 DonCoohd

@@ -206,6 +206,57 @@ function ns.PassFilters(id, f)
   return true
 end
 
+---------------------------------------------------------------------------
+-- (04.11.2026, Era-Test) Classic Era: the data carries WoW Forever's own items (ids from 270000 and more), which the
+-- Era client does not know; they stayed "Loading item..." for good. On Era those items leave the data once at load,
+-- so no list, count, progress or tooltip line sees them. Forever keeps everything.
+-- Era = interface below 16000 (Forever 1.60 is 16001) and not WOW_PROJECT_CAMELOT; WOW_PROJECT_ID alone is not
+-- enough (FOREVER_FACTS: it was 1 on an early Forever build).
+---------------------------------------------------------------------------
+function ns.IsEra()
+  if WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT then return false end
+  local ok, _, _, _, toc = pcall(GetBuildInfo)
+  toc = ok and ns.Num(toc)
+  return toc ~= nil and toc > 0 and toc < 16000
+end
+
+-- false only when the client says so: C_Item.DoesItemExistByID false (or missing) and no instant facts (no icon)
+function ns.ItemExists(id)
+  local exists = C_Item and C_Item.DoesItemExistByID
+  if type(exists) == "function" then
+    local ok, r = pcall(exists, id)
+    if ok and r == true then return true end
+  end
+  local get = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+  if type(get) ~= "function" then return type(exists) ~= "function" end
+  local ok, _, _, _, _, icon = pcall(get, id)
+  return ok and icon ~= nil
+end
+
+local function Keep(list)
+  if type(list) ~= "table" then return list, 0 end
+  local out, gone = {}, 0
+  for _, id in ipairs(list) do
+    if ns.ItemExists(id) then out[#out + 1] = id else gone = gone + 1 end
+  end
+  return out, gone
+end
+
+-- removes the items the client does not know (only on Era); returns how many went
+function ns.PruneUnknownItems(force)
+  if not (force or ns.IsEra()) then return 0 end
+  local gone = 0
+  for _, d in pairs(ns.DROPS or {}) do
+    local n
+    for _, b in ipairs(d.bosses or {}) do b.items, n = Keep(b.items) gone = gone + n end
+    for _, q in ipairs(d.quests or {}) do q.items, n = Keep(q.items) gone = gone + n end
+    if d.common then d.common, n = Keep(d.common) gone = gone + n end
+  end
+  ns.prunedItems = gone
+  return gone
+end
+ns.PruneUnknownItems()
+
 -- why the item is not for you (for the tile), or nil
 function ns.NotForYou(id)
   local m = ns.ItemMeta(id)

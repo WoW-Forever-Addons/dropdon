@@ -1,5 +1,12 @@
 # Changes
 
+## 0.8.0
+
+- **Minimap button:** golden ring with Dropdon's logo; right-click opens a menu with the loot window, the mini window, four switches, "All options" and "Hide minimap button".
+- **Classic Era:** items of WoW Forever that the Era client does not know are hidden and not counted (no more "Loading item...").
+- **Boss counter** reads "4 / 6".
+- **Addon list:** the addon has its own logo in the game's addon list.
+
 ## 0.7.0
 
 - **First release on CurseForge.**

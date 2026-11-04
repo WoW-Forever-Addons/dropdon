@@ -1,4 +1,4 @@
-local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 15)
+local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 17)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Kit" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 2"; minor 2, 02.11.2026: Kit.IconButton, the symbols from
@@ -28,6 +28,9 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 15)
 -- (minor 14, 02.11.2026, Daniel on Questdon's chain parts: "part 1 und 2 sind ja schon erledigt, kann man das besser
 -- kennzeichnen?") ChainMark:SetDone(on): a green box with a tick instead of the number; ListRow item.chainDone
 -- (minor 15, 03.11.2026) FocusCard:SetPlain(on) hides the symbol's dark box as well
+-- (minor 16, 04.11.2026, Era-Test, Daniel: "die zahlen sind sehr eng an dem / geschrieben besonders die 1") Kit.Fraction(a, b):
+-- "a / b" with a space on each side of the slash (Ring, ListRow progress); a Kit.Dialog always shows at Kit.scale times
+-- its own factor (d:SetOwnScale), a SetScale from outside before Show no longer stacks on top (Luredon's 1.5)
 -- (minor 7, 02.11.2026, Daniel: the coming steps "gerne kleiner, das wirkt fast so als könnte man es auswählen": ListRow
 -- item.compact, a quiet small row: title in the sub font, its second line smaller, title colour body; give the item h = 28)
 -- (minor 6, 02.11.2026, Daniel after Leveldon in the game: "der kreis mit % sollte durchgängig sein", "die ? ! und schwerter in der
@@ -50,7 +53,7 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 15)
 ---------------------------------------------------------------------------
 if not Kit then return end -- the same or a newer Kit is loaded already
 local Core = LibStub("DonCore-1.0")
-Kit.VERSION = 15
+Kit.VERSION = 17
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local floor, ceil, max, min, abs, pi, sin, cos = math.floor, math.ceil, math.max, math.min, math.abs, math.pi, math.sin, math.cos
@@ -559,7 +562,7 @@ function Kit.Ring(parent, size, opts)
       t:Show()
     end
     for i = n + 1, #self.segs do self.segs[i]:Hide() end
-    self.text:SetText(total > 0 and (done .. "/" .. total) or "")
+    self.text:SetText(total > 0 and Kit.Fraction(done, total) or "")
     if solid then self.text:SetText(total > 0 and (floor(100 * min(done, total) / total + 0.5) .. "%") or "") end
     Kit.Fit(self.text, size - 8)
   end
@@ -1537,7 +1540,7 @@ function Kit.ZoneRow(parent)
       if it.iconCoords then Call(self.icon, "SetTexCoord", unpack(it.iconCoords)) else Call(self.icon, "SetTexCoord", 0.07, 0.93, 0.07, 0.93) end
     end
     local p = it.progress
-    self.num:SetText(p and p[2] and p[2] > 0 and (p[1] .. "/" .. p[2]) or "")
+    self.num:SetText(p and p[2] and p[2] > 0 and Kit.Fraction(p[1], p[2]) or "")
     self._tip = self.rail and { it.text, { it.range or (it.count and tostring(it.count)) or nil, self.num:GetText() ~= "" and self.num:GetText() or nil } } or nil
     self._tipFn = (not self.rail) and it.tooltipFn or nil
     self:Layout(self._w or self:GetWidth())
@@ -1581,7 +1584,7 @@ function Kit.ZoneRow(parent)
     Kit.Fit(self.count, 56)
     Kit.Fit(self.text, w - x - 8 - TextW(self.count) - 6)
     if twoLines then
-      Kit.Fit(self.num, 48)
+      Kit.Fit(self.num, 56) -- (minor 16) room for the spaces of Kit.Fraction
       local nw = max(TextW(self.num), 28)
       self.num:ClearAllPoints() self.num:SetPoint("RIGHT", -8, -8)
       local bw = max(10, w - S.markBar - 8 - 8 - nw - 6)
@@ -3114,7 +3117,17 @@ function Kit.EditBox(parent, opts)
   e:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   e:SetScript("OnEnterPressed", function(self) self:ClearFocus() Safe("edit enter", opts.onEnter, self) end)
   e:SetScript("OnTabPressed", function(self) if self.nextBox and self.nextBox.SetFocus then self.nextBox:SetFocus() else self:ClearFocus() end end)
-  e:SetScript("OnEditFocusGained", function(self) self._focus = true Refresh(self) end)
+  -- (04.11.2026, Era-Test, Daniel: "wenn ich hier reinklicke, soll direkt die ganze zahl markiert sein, damit ich
+  -- überschreiben kann ohne zu löschen") number and money boxes select their whole text on focus; the click places the
+  -- cursor after OnEditFocusGained, so once more on the next frame
+  local selectAll = opts.selectAll or (opts.selectAll == nil and opts.numeric)
+  e:SetScript("OnEditFocusGained", function(self)
+    self._focus = true Refresh(self)
+    if selectAll then
+      Call(self, "HighlightText")
+      if C_Timer and C_Timer.After then C_Timer.After(0, function() if self._focus then Call(self, "HighlightText") end end) end
+    end
+  end)
   e:SetScript("OnEditFocusLost", function(self)
     self._focus = nil
     if opts.numeric and (self:GetText() or "") ~= "" then
@@ -3304,6 +3317,18 @@ function Kit.Dialog(name, opts)
   d:SetSize(opts.width or 420, opts.height or 300)
   d:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
   Kit.Scaled(d) -- (minor 13)
+  -- (minor 16, 04.11.2026, Era-Test, Daniel on Luredon's question: "schon seeehr groß") a dialog always shows at Kit.scale
+  -- times its own factor: Luredon set SetScale(1.5) before Show, which replaced the 0.8 and made the dialog 1.875 times
+  -- the Kit windows. Show puts the Kit scale back; a dialog that should be larger asks for it with d:SetOwnScale(f).
+  function d:SetOwnScale(v)
+    self._ownScale = tonumber(v) or 1
+    ApplyScale(self, false)
+  end
+  local show = d.Show
+  function d:Show(...)
+    ApplyScale(self, false)
+    return show(self, ...)
+  end
   Fill(d, C.window)
   Border(d, C.outer, 0)
   Border(d, C.gold, 1)
@@ -3400,10 +3425,15 @@ function Kit.ShowCopy(title, hint, text, words)
       if not self.hint then return end
       self.hint:ClearAllPoints()
       self.hint:SetPoint("TOPLEFT", self.body, "TOPLEFT", 0, 0)
-      Kit.Fit(self.hint, w)
+      -- (04.11.2026, Era-Test) the hint wraps (long hints like Questdon's export with its address were cut to one line)
+      Call(self.hint, "SetWidth", w)
+      Call(self.hint, "SetWordWrap", true)
+      Call(self.hint, "SetJustifyH", "LEFT")
+      local ok, sh = Call(self.hint, "GetStringHeight")
+      local top = (self.hint:GetText() or "") == "" and 0 or max(14, ok and tonumber(sh) or 14) + 8
       self.scroll:ClearAllPoints()
-      self.scroll:SetPoint("TOPLEFT", self.body, "TOPLEFT", 0, -22)
-      self.scroll:SetSize(w, max(20, h - 22))
+      self.scroll:SetPoint("TOPLEFT", self.body, "TOPLEFT", 0, -top)
+      self.scroll:SetSize(w, max(20, h - top))
       self.edit:SetWidth(max(20, w - 16))
     end })
     d.hint = Text(d.body, "sub", C.muted)
@@ -3466,6 +3496,13 @@ end
 
 local function Hexa(c) c = Col(c) return c.hex or ("ff%02x%02x%02x"):format(floor(c[1] * 255 + 0.5), floor(c[2] * 255 + 0.5), floor(c[3] * 255 + 0.5)) end
 Kit.HexColor = Hexa
+
+-- (minor 16, 04.11.2026, Era-Test) a count of a total, "16 / 17": a plain space on each side of the slash, so the digits
+-- (the narrow 1 above all) do not stick to it. A hair space (U+200A) is not in Friz Quadrata and Arial Narrow of the
+-- client (it shows as a box), the plain space is the narrowest one every Kit font has.
+function Kit.Fraction(a, b)
+  return tostring(a == nil and "" or a) .. " / " .. tostring(b == nil and "" or b)
+end
 
 function Kit.Money(copper, opts)
   opts = opts or {}
@@ -3846,7 +3883,7 @@ end
 function Kit.MoneyBox(parent, opts)
   opts = opts or {}
   local m
-  m = Kit.EditBox(parent, { placeholder = opts.placeholder, maxLetters = 24,
+  m = Kit.EditBox(parent, { placeholder = opts.placeholder, maxLetters = 24, selectAll = opts.selectAll ~= false,
     onChange = function(t) Safe("money", opts.onChange, Kit.ParseMoney(t), m) end,
     onEnter = function() Safe("money enter", opts.onEnter, Kit.ParseMoney(m:GetText()), m) end })
   function m:GetValue() return Kit.ParseMoney(self:GetText()) end

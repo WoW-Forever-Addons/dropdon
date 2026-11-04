@@ -14,7 +14,7 @@ ns.defaults = {
   panelMini = {},    -- position etc. of the small window
   mode = "big",      -- which window /dd and the minimap button open ("big" or "mini")
   minimapButton = true,
-  minimapAngle = 160,
+  minimapAngle = 225, -- (04.11.2026, Era-Test) 225 so the Don minimap buttons do not cover each other
   autoSelect = true, -- select the instance you walk into
   tooltip = true,    -- the line Instance - Boss in item tooltips
   -- Look of both windows (Options > Appearance). Position and collapsed state stay per window in panel / panelMini.

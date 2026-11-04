@@ -118,3 +118,11 @@ L["More"] = "Mais"
 L["Search instance"] = "Buscar instância"
 L["Window width"] = "Largura da janela"
 L["Drag: width of the window."] = "Arrastar: largura da janela."
+-- (04.11.2026, Era-Test) the state line in the minimap button's tooltip
+L["You are here: %s"] = "Você está aqui: %s"
+L["Not in a dungeon or raid"] = "Fora de masmorras e raides"
+-- (04.11.2026, Era-Test) the minimap button's menu on right click
+L["Loot window"] = "Janela de saque"
+L["Mini window"] = "Minijanela"
+L["All options"] = "Todas as opções"
+L["Left click: window. Right click: menu. Drag: move."] = "Clique esquerdo: janela. Clique direito: menu. Arrastar: mover."
