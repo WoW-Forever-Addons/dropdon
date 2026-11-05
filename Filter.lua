@@ -61,21 +61,61 @@ function ns.ItemMeta(id)
   return m
 end
 
--- name, quality once the client has the item (nil before)
+-- (05.11.2026, Daniel: "dropdon lädt nichts", Ruins of Lordaeron, The Baron) The Forever server does not answer
+-- GetItemInfo for some of its own items, so they stayed "Loading item..." for good. Until the client has the item,
+-- Data/Names.lua (ATT, English) gives name, quality and levels; the client's localised answer wins once it comes.
+-- Each unanswered item is asked for again (C_Item.RequestLoadItemDataByID) at most every 5 seconds.
+local asked = {}
+local function Ask(id)
+  local now = (GetTime and GetTime()) or 0
+  if asked[id] and now - asked[id] < 5 then return end
+  asked[id] = now
+  local req = C_Item and C_Item.RequestLoadItemDataByID
+  if type(req) == "function" then pcall(req, id) end
+end
+
+-- (05.11.2026, Daniel: Wailing Caverns, Lord Pythas, Lord Cobrahn: "schau dir alle instanzen an") Not only Forever's
+-- own items: classic items Forever changed (Armor of the Fang) get no answer either, so Names.lua covers every item.
+-- One string per item, "name|quality|item level|req. level", split on first use.
+local fallback = {}
+local function Fallback(id)
+  local f = fallback[id]
+  if f then return f end
+  local s = ns.ITEM_FALLBACK and ns.ITEM_FALLBACK[id]
+  if type(s) == "table" then f = s
+  elseif type(s) == "string" then
+    local name, q, il, lv = s:match("^([^|]*)|?(%d*)|?(%d*)|?(%d*)$")
+    f = { name, tonumber(q) or 0, tonumber(il) or 0, tonumber(lv) or 0 }
+  end
+  if f and ns.Str(f[1]) then
+    fallback[id] = f
+    return f
+  end
+end
+
+-- name, quality once the client has the item; before that the fallback (quality nil when unknown) or nil
 function ns.ItemName(id)
   local get = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-  if type(get) ~= "function" then return nil end
-  local ok, name, _, quality = pcall(get, id)
-  if ok and ns.Str(name) then return name, ns.Num(quality) end
+  if type(get) == "function" then
+    local ok, name, _, quality = pcall(get, id)
+    if ok and ns.Str(name) then return name, ns.Num(quality) end
+  end
+  Ask(id)
+  local f = Fallback(id)
+  if f then return f[1], (ns.Num(f[2]) or 0) > 0 and f[2] or nil end
   return nil
 end
 
 -- (02.11.2026, StyleKit 2 step 4) item level and required level once the client has the item (nil before; 0 counts as none)
 function ns.ItemLevels(id)
   local get = (C_Item and C_Item.GetItemInfo) or GetItemInfo
-  if type(get) ~= "function" then return nil end
-  local ok, name, _, _, ilvl, req = pcall(get, id)
-  if not (ok and ns.Str(name)) then return nil end
+  local ok, name, _, ilvl, req
+  if type(get) == "function" then ok, name, _, _, ilvl, req = pcall(get, id) end
+  if not (ok and ns.Str(name)) then
+    local f = Fallback(id)
+    if not f then return nil end
+    ilvl, req = f[3], f[4]
+  end
   ilvl, req = ns.Num(ilvl), ns.Num(req)
   return (ilvl and ilvl > 0) and ilvl or nil, (req and req > 0) and req or nil
 end

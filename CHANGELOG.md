@@ -1,5 +1,9 @@
 # Changes
 
+## 0.8.1
+
+- **Item names without the server:** items the WoW Forever server does not answer for (new and changed ones) show their name from Dropdon's own list instead of staying empty.
+
 ## 0.8.0
 
 - **Minimap button:** golden ring with Dropdon's logo; right-click opens a menu with the loot window, the mini window, four switches, "All options" and "Hide minimap button".

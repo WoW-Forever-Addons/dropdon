@@ -3,7 +3,7 @@
 ## Notes: Dungeon and raid loot for WoW Forever: every instance with its bosses and what they drop, filtered to what you can use.
 ## Notes-deDE: Dungeon- und Schlachtzugsbeute für WoW Forever: jede Instanz mit ihren Bossen und dem, was sie droppen, gefiltert auf das, was du nutzen kannst.
 ## Author: DonCoohd
-## Version: 0.8.0
+## Version: 0.8.1
 ## Category: Inventory
 ## Category-deDE: Inventar
 ## IconTexture: Interface\AddOns\Dropdon\Media\minimap
@@ -30,6 +30,7 @@ Locales\koKR.lua
 Locales\zhTW.lua
 Core.lua
 Data\Drops.lua
+Data\Names.lua
 Filter.lua
 Window.lua
 Mini.lua

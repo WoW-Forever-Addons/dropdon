@@ -1,4 +1,4 @@
-# Dropdon 0.8.0 (WoW Forever)
+# Dropdon 0.8.1 (WoW Forever)
 
 Dungeon- und Schlachtzugsbeute für World of Warcraft: Forever (Client "Camelot", Interface 16001): jede Instanz mit ihren Bossen
 und dem, was sie droppen, gefiltert auf das, was du nutzen kannst.
