@@ -1,5 +1,12 @@
 # Changes
 
+## 0.9.0
+
+- **Two new dungeons:** The Drowned City (5 bosses) and Krol'dok Stronghold (6 bosses) with their loot and quest rewards; a few new items in Gnomeregan, Razorfen Downs, Zul'Farrak, the Sunken Temple and the Scarlet Monastery.
+- **Tooltips at the mouse:** item tooltips of the wide rows open at the cursor instead of beside the whole window.
+- **No more "Retrieving item information":** while the server has not answered for an item, Dropdon shows its name, kind, item level and required level from its own list.
+- **Window keeps its top edge:** after moving it, the window grows downwards instead of from its middle.
+
 ## 0.8.1
 
 - **Item names without the server:** items the WoW Forever server does not answer for (new and changed ones) show their name from Dropdon's own list instead of staying empty.

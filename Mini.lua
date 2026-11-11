@@ -45,7 +45,7 @@ local function ShowGrid(ids)
   local entries = {}
   for i, id in ipairs(ids) do
     local _, q = ns.ItemName(id)
-    entries[i] = { itemID = id, quality = q }
+    entries[i] = { itemID = id, quality = q, tipFallback = ns.TipFallback(id) } -- (05.11.2026) while the game does not know it
   end
   grid:SetItems(entries)
   local h = grid:Layout(GridWidth())

@@ -162,7 +162,8 @@ local function LootItems(d)
       local it = { kind = "trow", itemID = id, order = i, title = name or L["Loading item..."],
         titleColor = not name and C.quiet or nil, quality = name and quality or nil,
         icon = ns.ItemMeta(id).icon, sub = sub, cells = { ilvl = ilvl or "", req = req or "" },
-        cellColors = (req and lvl > 0 and req > lvl) and { req = C.red } or nil }
+        cellColors = (req and lvl > 0 and req > lvl) and { req = C.red } or nil,
+        tipFallback = ns.TipFallback(id, sub) } -- (05.11.2026) Kit: shown while the game does not know the item
       if not pass then it.unusable = ns.NotForYou(id) or L["Hidden by your filters."] end
       items[#items + 1] = it
     end

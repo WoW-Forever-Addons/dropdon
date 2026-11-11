@@ -120,6 +120,20 @@ function ns.ItemLevels(id)
   return (ilvl and ilvl > 0) and ilvl or nil, (req and req > 0) and req or nil
 end
 
+-- (05.11.2026, Daniel: "tooltip dauerhaft am laden?") the stand-in tooltip while the game does not know the item
+-- (Kit item.tipFallback): name in the quality colour, sub line, item level and required level from Names.lua
+function ns.TipFallback(id, sub)
+  local name, quality = ns.ItemName(id)
+  if not ns.Str(name) then return nil end
+  local ilvl, req = ns.ItemLevels(id)
+  local lines = {}
+  if ns.Str(sub) then lines[#lines + 1] = sub end
+  local IL, ML = rawget(_G, "ITEM_LEVEL"), rawget(_G, "ITEM_MIN_LEVEL")
+  if ilvl then lines[#lines + 1] = type(IL) == "string" and IL:format(ilvl) or ("Item Level " .. ilvl) end
+  if req then lines[#lines + 1] = type(ML) == "string" and ML:format(req) or ("Requires Level " .. req) end
+  return { name, quality, lines = lines }
+end
+
 function ns.QualityColor(quality)
   local t = rawget(_G, "ITEM_QUALITY_COLORS")
   local c = type(t) == "table" and quality and t[quality]

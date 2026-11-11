@@ -1,4 +1,4 @@
-local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 18)
+local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 21)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Kit" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 2"; minor 2, 02.11.2026: Kit.IconButton, the symbols from
@@ -30,9 +30,21 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 18)
 -- (minor 15, 03.11.2026) FocusCard:SetPlain(on) hides the symbol's dark box as well
 -- (minor 18, 04.11.2026, Guildon's map tooltip) Kit.Tooltip: a head with class symbol, sub line and badge, class symbols
 -- before lines, opts.anchor and opts.edge = "gold"; Kit.IconText, Kit.CLASS_SHEET
+-- (minor 19, 05.11.2026, Daniel on Dropdon: "tooltip dauerhaft am laden? tooltip sollte auch direkt da öffnen, wo man drüber
+-- hovert") Kit.TipAnchor(owner): a wide owner (a list row) gets the tooltip at the mouse, a small one keeps ANCHOR_RIGHT
+-- (Kit.Tooltip without opts.anchor, Kit.ItemTooltip); Kit.ItemTooltip asks the game for an item it does not know yet and
+-- builds the tooltip again when GET_ITEM_INFO_RECEIVED brings it (it stayed on "Retrieving item information"); Forever
+-- never answers for some items, so the caller may give a stand-in (item.tipFallback = { name, quality, lines }: the name in
+-- the quality colour, the lines muted) that shows until the game knows the item (Kit.ItemTipFn, Kit.ItemGrid entries)
 -- (minor 16, 04.11.2026, Era-Test, Daniel: "die zahlen sind sehr eng an dem / geschrieben besonders die 1") Kit.Fraction(a, b):
 -- "a / b" with a space on each side of the slash (Ring, ListRow progress); a Kit.Dialog always shows at Kit.scale times
 -- its own factor (d:SetOwnScale), a SetScale from outside before Show no longer stacks on top (Luredon's 1.5)
+-- (minor 21, 08.11.2026, Profitdon's shopping list, Daniel: "fehlt weiterhin das X für löschen am besten am hauptitem links
+-- daneben", "bei der anzahl unter kaufen wollte ich ein beschreibbares feld") ItemRow: item.onRemove's X stands left of the
+-- symbol (the 07.11. X came without a new minor, so an older Kit 20 of another addon won and showed none); item.edit =
+-- { key, value, onCommit(item, n), tip }: a number box in place of that column's text, committed on Enter or on leaving
+-- (minor 20, 05.11.2026, Daniel on Golddon's sell row: "felder für g / s / c nicht alles in einem") Kit.CoinBox: money in
+-- three number boxes with the coin symbols, the same calls as Kit.MoneyBox
 -- (minor 7, 02.11.2026, Daniel: the coming steps "gerne kleiner, das wirkt fast so als könnte man es auswählen": ListRow
 -- item.compact, a quiet small row: title in the sub font, its second line smaller, title colour body; give the item h = 28)
 -- (minor 6, 02.11.2026, Daniel after Leveldon in the game: "der kreis mit % sollte durchgängig sein", "die ? ! und schwerter in der
@@ -55,7 +67,7 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 18)
 ---------------------------------------------------------------------------
 if not Kit then return end -- the same or a newer Kit is loaded already
 local Core = LibStub("DonCore-1.0")
-Kit.VERSION = 18
+Kit.VERSION = 21
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local floor, ceil, max, min, abs, pi, sin, cos = math.floor, math.ceil, math.max, math.min, math.abs, math.pi, math.sin, math.cos
@@ -333,6 +345,22 @@ local function EdgeGold(tt, owner)
 end
 Kit.TooltipEdgeOwner = function() return edge.owner end -- (tests)
 
+-- (minor 19) where a tooltip opens: at the mouse for a wide owner (a list row, the tooltip right of the window was far from
+-- the row), right of a small one (a symbol)
+Kit.TIP_WIDE = 160
+function Kit.TipAnchor(owner)
+  local ok, w = false, nil
+  if owner and type(owner.GetWidth) == "function" then ok, w = pcall(owner.GetWidth, owner) end
+  if ok and type(w) == "number" and w >= Kit.TIP_WIDE then return "ANCHOR_CURSOR_RIGHT", 12, 4 end
+  return "ANCHOR_RIGHT", 0, 0
+end
+local function TipOwner(tt, owner, anchor)
+  if anchor then return pcall(tt.SetOwner, tt, owner, anchor) end
+  local a, x, y = Kit.TipAnchor(owner)
+  if pcall(tt.SetOwner, tt, owner, a, x, y) then return true end
+  return pcall(tt.SetOwner, tt, owner, "ANCHOR_RIGHT")
+end
+
 -- tooltip in the Don colours; lines: strings, { label, value [, colour], class = "MAGE" (symbol before the label) } or
 -- { header = "Text" }. (minor 18) title may be a head { text, sub, class or icon (+ coords), badge (gold, on the right) };
 -- opts.anchor (default "ANCHOR_RIGHT"), opts.edge = "gold"
@@ -341,7 +369,7 @@ function Kit.Tooltip(owner, title, lines, hint, opts)
   if not tt or not owner then return end
   opts = type(opts) == "table" and opts or {}
   EdgeBack()
-  if not pcall(tt.SetOwner, tt, owner, opts.anchor or "ANCHOR_RIGHT") then return end
+  if not TipOwner(tt, owner, opts.anchor) then return end
   local T, B, M, Q, G = C.hero, C.body, C.muted, C.quiet, C.txGold
   if type(title) == "table" then
     local text = IconText(title, 22) .. tostring(title.text or "")
@@ -3086,8 +3114,10 @@ function Kit.ItemIcon(parent, size)
   b:SetScript("OnEnter", function(self)
     local tt = GameTooltip
     if not tt or not pcall(tt.SetOwner, tt, self, "ANCHOR_RIGHT") then return end
-    local shown = false
-    if self.link and tt.SetHyperlink then shown = pcall(tt.SetHyperlink, tt, self.link) end
+    local me = self
+    local waits = Kit.ItemWait(self, self.itemID, function() local f = me:GetScript("OnEnter") if f then f(me) end end) -- (minor 19)
+    local shown = waits and Kit.ItemFallbackTip(tt, self.tipFallback) or false
+    if not shown and self.link and tt.SetHyperlink then shown = pcall(tt.SetHyperlink, tt, self.link) end
     if not shown and self.itemID and tt.SetItemByID then shown = pcall(tt.SetItemByID, tt, self.itemID) end
     if self.extraTip then for _, l in ipairs(self.extraTip) do pcall(tt.AddLine, tt, tostring(l), C.muted[1], C.muted[2], C.muted[3], true) end end
     if type(self.reason) == "string" then pcall(tt.AddLine, tt, self.reason, C.red[1], C.red[2], C.red[3], true) end
@@ -3100,7 +3130,7 @@ end
 ---------------------------------------------------------------------------
 -- (minor 10) ItemGrid: item symbols (Kit.ItemIcon) in rows, as many per row as the width takes; nothing scrolls, the
 -- caller gives the room. opts.size (default 28), opts.gap (4), opts.onClick(icon, button, entry).
--- g:SetItems({ { itemID, quality, count, unusable (true or a reason text) }, ... }) or plain item ids,
+-- g:SetItems({ { itemID, quality, count, unusable (true or a reason text), tipFallback (minor 19) }, ... }) or plain item ids,
 -- g:Layout(w) returns the height (0 without items), g.icons
 ---------------------------------------------------------------------------
 function Kit.ItemGrid(parent, opts)
@@ -3122,6 +3152,7 @@ function Kit.ItemGrid(parent, opts)
       b:SetItem(en.itemID, en.count, en.quality)
       b:SetUnusable(en.unusable)
       b.reason = type(en.unusable) == "string" and en.unusable or nil
+      b.tipFallback = en.tipFallback -- (minor 19)
       b:Show()
     end
     for i = #self.entries + 1, #self.icons do self.icons[i]:Hide() self.icons[i].entry = nil end
@@ -3146,7 +3177,8 @@ end
 
 ---------------------------------------------------------------------------
 -- EditBox 28 high in the Don style for text and numbers: opts.placeholder, opts.numeric (whole numbers, opts.min/max
--- clamp on leaving), opts.maxLetters, opts.onChange(text, box) on typing, opts.onEnter(box), opts.clear (a small x),
+-- clamp on leaving), opts.maxLetters, opts.onChange(text, box) on typing, opts.onEnter(box), (minor 21) opts.onLeave(box)
+-- when it loses the focus, opts.clear (a small x),
 -- Tab goes to box.nextBox (box:SetNext(other)). e:GetValue() (a number when numeric), e:SetValue(v), e:Layout(w)
 ---------------------------------------------------------------------------
 function Kit.EditBox(parent, opts)
@@ -3214,6 +3246,7 @@ function Kit.EditBox(parent, opts)
       local n = self:GetValue()
       if n and tostring(n) ~= self:GetText() then self:SetText(tostring(n)) Safe("edit", opts.onChange, tostring(n), self) end
     end
+    if opts.onLeave then Safe("edit leave", opts.onLeave, self) end
     Refresh(self)
   end)
   function e:Layout(w) self._w = w self:SetWidth(w) Kit.Fit(self.hint, max(1, w - 16 - (self.clear and 16 or 0))) end
@@ -3631,12 +3664,65 @@ function Kit.ParseMoney(t)
   return g and g >= 0 and floor(g * 10000 + 0.5) or nil
 end
 
+-- (minor 19) an item the game does not know yet: ask for it, and build the shown tooltip again when it comes
+local itemWait = {}
+local function ItemKnown(id)
+  local GI = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+  if not GI then return true end
+  local ok, name = pcall(GI, id)
+  return ok and name ~= nil
+end
+local function ItemAsk(id)
+  local req = C_Item and C_Item.RequestLoadItemDataByID
+  if type(req) == "function" then pcall(req, id) end
+  if not itemWait.frame then
+    itemWait.frame = CreateFrame("Frame")
+    pcall(itemWait.frame.RegisterEvent, itemWait.frame, "GET_ITEM_INFO_RECEIVED")
+    itemWait.frame:SetScript("OnEvent", function(_, _, got)
+      local w = itemWait.tip
+      if not (w and tonumber(got) == tonumber(w.id)) then return end
+      itemWait.tip = nil
+      local tt = GameTooltip
+      local okO, owned = pcall(tt.IsOwned, tt, w.owner)
+      local okS, shown = pcall(tt.IsShown, tt)
+      if okO and owned and okS and shown then pcall(w.redo) end
+    end)
+  end
+end
+Kit.ItemWaitFrame = function() return itemWait.frame, itemWait.tip end -- (tests)
+-- the tooltip of owner shows item id: when the game does not know it yet, ask and call redo() once it comes
+-- true while it waits (the game does not know the item)
+function Kit.ItemWait(owner, id, redo)
+  if not id or ItemKnown(id) then itemWait.tip = nil return false end
+  itemWait.tip = { owner = owner, id = id, redo = redo }
+  ItemAsk(id)
+  return true
+end
+-- the stand-in for an item the game does not know: fb = { name, quality, lines = { text or { label, value } } }
+function Kit.ItemFallbackTip(tt, fb)
+  if not (type(fb) == "table" and type(fb[1]) == "string" and fb[1] ~= "") then return false end
+  local q = Kit.QualityColor(fb[2])
+  pcall(tt.AddLine, tt, fb[1], q[1], q[2], q[3], true)
+  for _, l in ipairs(type(fb.lines) == "table" and fb.lines or {}) do
+    if type(l) == "table" and l[2] ~= nil then
+      pcall(tt.AddDoubleLine, tt, tostring(l[1] or ""), tostring(l[2]), C.muted[1], C.muted[2], C.muted[3], C.body[1], C.body[2], C.body[3])
+    elseif l ~= nil and l ~= "" then
+      pcall(tt.AddLine, tt, tostring(l), C.body[1], C.body[2], C.body[3], true)
+    end
+  end
+  return true
+end
+
 -- the game's item tooltip at owner (lines: more lines below, as Kit.Tooltip); false when the game has no such call
-function Kit.ItemTooltip(owner, id, lines, hint)
+-- (minor 19) at the mouse for a wide owner (Kit.TipAnchor); an unknown item is asked for and the tooltip built again
+-- fb: the stand-in while the game does not know the item (Kit.ItemFallbackTip)
+function Kit.ItemTooltip(owner, id, lines, hint, fb)
   local tt = GameTooltip
   if not (tt and owner and id) then return false end
-  if not pcall(tt.SetOwner, tt, owner, "ANCHOR_RIGHT") then return false end
-  local ok = tt.SetItemByID and pcall(tt.SetItemByID, tt, id)
+  if not TipOwner(tt, owner) then return false end
+  local waits = Kit.ItemWait(owner, id, function() Kit.ItemTooltip(owner, id, lines, hint, fb) end)
+  local ok = waits and Kit.ItemFallbackTip(tt, fb)
+  if not ok then ok = tt.SetItemByID and pcall(tt.SetItemByID, tt, id) end
   if not ok then ok = tt.SetHyperlink and pcall(tt.SetHyperlink, tt, "item:" .. tostring(id)) end
   for _, l in ipairs(type(lines) == "table" and lines or {}) do
     if type(l) == "table" and l[2] ~= nil then
@@ -3662,7 +3748,7 @@ function Kit.ItemTipFn(row)
     for _, l in ipairs(type(it.tipLines) == "table" and it.tipLines or {}) do lines[#lines + 1] = l end
     lines[#lines + 1] = { it.unusable, color = C.red }
   end
-  Kit.ItemTooltip(row, it.itemID, lines, it.tipHint)
+  Kit.ItemTooltip(row, it.itemID, lines, it.tipHint, it.tipFallback)
 end
 
 -- shift-click: the item's link into the open chat line (true when it did)
@@ -3724,6 +3810,35 @@ function Kit.ItemRow(parent)
     self._tipFn = it.tooltipFn or (not self._tip and it.itemID and Kit.ItemTipFn) or nil
     self._dim = (it.done or it.unusable) and true or nil
     self._active = it.active and true or nil
+    -- (07.11.2026, Profitdon: "oben ein X für das löschen") item.onRemove(item): a small X, (minor 21) left of the symbol,
+    -- item.removeTip its tooltip
+    if it.onRemove then
+      if not self.x then
+        self.x = Kit.IconButton(self, "close", { size = S.buttonSmall - 4, onClick = function()
+          local cur = self.item
+          if cur and cur.onRemove then Safe("row remove", cur.onRemove, cur) end
+        end })
+      end
+      if self.x.SetTooltip then self.x:SetTooltip(it.removeTip or "") end
+      Call(self.x, "SetFrameLevel", (self:GetFrameLevel() or 1) + 3)
+      self.x:Show()
+    elseif self.x then self.x:Hide() end
+    -- (minor 21) item.edit = { key, value, onCommit(item, n), tip }: a number box in the column key
+    if it.edit then
+      if not self.edit then
+        local function Commit(box)
+          local cur = self.item
+          local ed = cur and cur.edit
+          local n = box:GetValue()
+          if ed and n and n ~= ed.value and ed.onCommit then ed.value = n Safe("row edit", ed.onCommit, cur, n) end
+        end
+        self.edit = Kit.EditBox(self, { numeric = true, min = 1, width = 56, onEnter = Commit, onLeave = Commit })
+      end
+      self.edit:SetValue(it.edit.value)
+      if self.edit.SetTooltip and it.edit.tip then self.edit:SetTooltip(it.edit.tip) end
+      Call(self.edit, "SetFrameLevel", (self:GetFrameLevel() or 1) + 3)
+      self.edit:Show()
+    elseif self.edit then self.edit:Hide() end
     self:Layout(self._w or self:GetWidth())
     Refresh(self)
   end
@@ -3735,6 +3850,11 @@ function Kit.ItemRow(parent)
     local cols = (self.tlist and self.tlist.columns) or {}
     local vis = VisibleCols(cols, w)
     local x = S.markBar + 8 + (tonumber(it.indent) or 0)
+    if self.x and it.onRemove then
+      self.x:ClearAllPoints()
+      self.x:SetPoint("LEFT", x - 2, 0)
+      x = x + (S.buttonSmall - 4) + S.gap - 2
+    end
     self.iconBox:ClearAllPoints()
     self.iconBox:SetPoint("LEFT", x, 0)
     if self.iconBox:IsShown() then x = x + S.iconMid + S.gap end
@@ -3745,7 +3865,14 @@ function Kit.ItemRow(parent)
     for i = #vis, 1, -1 do
       local c = vis[i]
       local fs = self:Cell(i)
-      fs:SetText(cells[c.key] ~= nil and tostring(cells[c.key]) or "")
+      local edit = it.edit and it.edit.key == c.key and self.edit
+      fs:SetText((cells[c.key] ~= nil and not edit) and tostring(cells[c.key]) or "")
+      if edit then
+        edit:ClearAllPoints()
+        edit:SetPoint("RIGHT", -rx, 0)
+        edit:SetHeight(S.button - 4)
+        edit:Layout(max(36, min(64, (c.width or 80) - S.gap)))
+      end
       TextColor(fs, (it.cellColors and it.cellColors[c.key]) or C.body)
       fs:SetJustifyH(c.align or "RIGHT")
       fs:ClearAllPoints()
@@ -3979,6 +4106,67 @@ function Kit.MoneyBox(parent, opts)
     local c = Kit.ParseMoney(self:GetText())
     if c then self:SetValue(c) end
   end)
+  return m
+end
+
+-- (minor 20, 05.11.2026, Daniel: "felder für g / s / c nicht alles in einem") CoinBox: money in three number boxes, gold,
+-- silver, copper, each with its coin symbol; silver and copper at most 99. The same calls as MoneyBox: m:GetValue() copper
+-- (nil when all three are empty), m:SetValue(copper), m:GetText() ("1g 2s 3c", for Kit.ParseMoney), m:SetNext(other),
+-- m:SetFocus(), m:Layout(w) (gold takes what silver and copper leave); opts.onChange(copper, m), opts.onEnter(copper, m)
+function Kit.CoinBox(parent, opts)
+  opts = opts or {}
+  local m = CreateFrame("Frame", nil, parent)
+  m:SetHeight(S.button)
+  m.boxes, m.coins = {}, {}
+  local function changed() Safe("coins", opts.onChange, m:GetValue(), m) end
+  local function enter() Safe("coins enter", opts.onEnter, m:GetValue(), m) end
+  for i = 1, 3 do
+    local b = Kit.EditBox(m, { numeric = true, maxLetters = i == 1 and 7 or 2, min = 0, max = i > 1 and 99 or nil,
+      onChange = changed, onEnter = enter })
+    m.boxes[i] = b
+    m.coins[i] = m:CreateTexture(nil, "ARTWORK")
+    m.coins[i]:SetTexture(Kit.COINS[i])
+    m.coins[i]:SetSize(12, 12)
+  end
+  m.boxes[1]:SetNext(m.boxes[2]) m.boxes[2]:SetNext(m.boxes[3])
+  function m:GetValue()
+    local any, total = false, 0
+    for i, b in ipairs(self.boxes) do
+      local n = tonumber(b:GetText() or "")
+      if n then any = true total = total + n * (i == 1 and 10000 or i == 2 and 100 or 1) end
+    end
+    return any and total or nil
+  end
+  function m:GetText()
+    local c = self:GetValue()
+    return c and ("%dg %ds %dc"):format(floor(c / 10000), floor(c / 100) % 100, c % 100) or ""
+  end
+  function m:SetValue(c)
+    c = tonumber(c)
+    if not c then for _, b in ipairs(self.boxes) do b:SetValue("") end return end
+    c = floor(c + 0.5)
+    self.boxes[1]:SetValue(floor(c / 10000)) self.boxes[2]:SetValue(floor(c / 100) % 100) self.boxes[3]:SetValue(c % 100)
+  end
+  function m:SetText(t) self:SetValue(Kit.ParseMoney(t)) end
+  function m:SetNext(other) self.boxes[3]:SetNext(other) end
+  function m:SetFocus() self.boxes[1]:SetFocus() end
+  function m:ClearFocus() for _, b in ipairs(self.boxes) do b:ClearFocus() end end
+  function m:Layout(w)
+    w = tonumber(w) or 140
+    self._w = w
+    self:SetWidth(w)
+    local coin, gap, small = 12, 2, 26
+    local gold = max(24, w - 2 * small - 3 * (coin + gap) - 2 * S.gap)
+    local x = 0
+    for i, b in ipairs(self.boxes) do
+      local bw = i == 1 and gold or small
+      b:ClearAllPoints() b:SetPoint("LEFT", self, "LEFT", x, 0) b:Layout(bw)
+      self.coins[i]:ClearAllPoints() self.coins[i]:SetPoint("LEFT", self, "LEFT", x + bw + gap, 0)
+      x = x + bw + gap + coin + S.gap
+    end
+  end
+  m:Layout(opts.width or 140)
+  if opts.value ~= nil then m:SetValue(opts.value) end
   return m
 end
 
