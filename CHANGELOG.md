@@ -1,5 +1,10 @@
 # Changes
 
+## 0.10.0
+
+- **New dungeon: Alcaz Prison** (levels 48-53) with its four bosses, their loot and the quest rewards.
+- **More loot in Zul'Farrak:** the new Forever items of several bosses, and a few new quest rewards elsewhere.
+
 ## 0.9.0
 
 - **Two new dungeons:** The Drowned City (5 bosses) and Krol'dok Stronghold (6 bosses) with their loot and quest rewards; a few new items in Gnomeregan, Razorfen Downs, Zul'Farrak, the Sunken Temple and the Scarlet Monastery.
