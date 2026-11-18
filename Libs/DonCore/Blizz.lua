@@ -1,4 +1,4 @@
-local Bz = LibStub("DonCore-1.0"):NewModule("Blizz", 6)
+local Bz = LibStub("DonCore-1.0"):NewModule("Blizz", 7)
 if not Bz then return end
 
 ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ local K = setmetatable({}, { __index = Kit or {} })
 Bz.kit = K
 Bz.K = K -- (Profitdon's name for the kit)
 K.blizzLook = true -- a caller can tell the two kits apart
-Bz.VERSION = 6
+Bz.VERSION = 7
 Bz.ROW_H = 24 -- the row height of Bz.List without opts.rowHeight (Profitdon's craft and sell lists)
 if Bz.light == nil then Bz.light = true end
 
@@ -1722,6 +1722,7 @@ PART.row = {
 }
 
 -- kind "group": the game's plus or minus button, gold text, a number on the right
+-- (minor 7) it.indent: pixels the button and the text move right (a sub group, Profitdon writs: zones under continents)
 PART.group = {
   build = function(p)
     p.band = p:CreateTexture(nil, "BACKGROUND")
@@ -1736,6 +1737,9 @@ PART.group = {
     p.count:SetPoint("RIGHT", -12, 0)
   end,
   fill = function(p, it, w)
+    local ind = tonumber(it.indent) or 0
+    p.arrow:ClearAllPoints()
+    p.arrow:SetPoint("LEFT", 8 + ind, 0)
     if it.static then p.arrow:Hide()
     else
       p.arrow:SetTexture(it.collapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up")
@@ -1744,14 +1748,14 @@ PART.group = {
     p.text:SetText(it.text or "")
     p.text:SetTextColor(Col3(it.color, GOLD))
     p.text:ClearAllPoints()
-    p.text:SetPoint("LEFT", it.static and 12 or 28, 0)
+    p.text:SetPoint("LEFT", (it.static and 12 or 28) + ind, 0)
     -- the Kit writes right and count side by side; a caller that gives the same number twice gets it once
     local right = it.right ~= nil and tostring(it.right) or ""
     if it.count ~= nil and tostring(it.count) ~= right then right = right .. (right ~= "" and "  " or "") .. tostring(it.count) end
     -- (minor 4) the right text takes the room it needs ("Zones: 23"), the title the rest
     p.count:SetText(right)
     local cw = right ~= "" and math.max(24, math.min(math.floor(w * 0.45), Width(p.count) + 4)) or 0
-    p.text:SetWidth(math.max(20, w - (it.static and 12 or 28) - cw - 20))
+    p.text:SetWidth(math.max(20, w - (it.static and 12 or 28) - ind - cw - 20))
   end,
 }
 

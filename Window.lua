@@ -114,8 +114,32 @@ end
 -- the right column of a boss row: fitting items gold, the total quiet ("4 / 6")
 -- (04.11.2026, Era-Test) the format of Kit.Fraction ("a / b", a space on each side of the slash); Kit.Fraction has no
 -- colours, so the two colours go around its parts here
-local function FitText(fit, all)
+-- (18.11.2026, Daniel's picture of the game's look) on the gold band of the selected row the quiet colours vanish: there
+-- the number white and the total light
+local function FitText(fit, all, on)
+  if on then return Hex(C.hero) .. fit .. "|r" .. Hex(C.body) .. " / " .. all .. "|r" end
   return Hex(fit > 0 and C.txGold or C.quiet) .. fit .. "|r" .. Hex(C.quiet) .. " / " .. all .. "|r"
+end
+
+-- (18.11.2026, Daniel: "jedes fenster haargenau ... besser"; the game's look cut "Ruins of Lor..." while the level sat
+-- in a right column of 96) the right column only as wide as its text needs: "15-22" and "14 / 15"; the Kit's font is a
+-- little wider
+local function RightW(kind)
+  if UI.blizzLook then return kind == "boss" and 46 or 40 end
+  return kind == "boss" and 52 or 46
+end
+
+-- the selected row in the game's look: a gold band, on which the green or yellow level is hard to read; the level of
+-- that row white there (the colour stays in every other row, the footer and the tooltip name the range)
+local function MarkSelected(list, key)
+  local blizz = UI.blizzLook
+  for _, it in ipairs(list and list.items or {}) do
+    if it.key ~= nil then
+      local on = blizz and it.key == key or false
+      if it.levelColor then it.rightColor = on and C.hero or it.levelColor end
+      if it.fit then it.right = FitText(it.fit, it.all, on) end
+    end
+  end
 end
 
 ---------------------------------------------------------------------------
@@ -223,8 +247,9 @@ local function InstanceRow(e, here)
   local n = #(d.bosses or {})
   local sub = (n == 1 and L["%d boss"] or L["%d bosses"]):format(n)
   if here then sub = Hex(C.blue) .. L["You are here"] .. "|r · " .. sub end
-  return { key = e.id, title = ns.InstanceName(e.id, d), sub = sub, right = LevelText(d), rightColor = LevelColor(d),
-    markColor = here and C.blue or nil, tooltip = tip }
+  local color = LevelColor(d)
+  return { key = e.id, title = ns.InstanceName(e.id, d), sub = sub, right = LevelText(d), rightColor = color,
+    levelColor = color, rightWidth = RightW("inst"), markColor = here and C.blue or nil, tooltip = tip }
 end
 
 local function InstanceItems()
@@ -257,18 +282,20 @@ local function BossItems(d)
     local name, title = SplitName(ns.BossName(b))
     local fit = Passing(b.items)
     out[#out + 1] = { key = i, title = name, sub = title, h = title and 36 or 28, right = FitText(fit, #b.items),
-      markColor = fit > 0 and C.green or nil, tooltip = title and { ns.BossName(b) } or nil }
+      fit = fit, all = #b.items, rightWidth = RightW("boss"), markColor = fit > 0 and C.green or nil, tooltip = title and { ns.BossName(b) } or nil }
   end
   -- 24.10. (Daniel): a divider sets the special entries apart from the bosses
   local extra = {}
   if d.common and #d.common > 0 then
     local fit = Passing(d.common)
-    extra[#extra + 1] = { key = "common", title = L["Shared drops"], h = 28, right = FitText(fit, #d.common), markColor = fit > 0 and C.green or nil }
+    extra[#extra + 1] = { key = "common", title = L["Shared drops"], h = 28, right = FitText(fit, #d.common),
+      fit = fit, all = #d.common, rightWidth = RightW("boss"), markColor = fit > 0 and C.green or nil }
   end
   local qi = QuestItems(d)
   if #qi > 0 then
     local fit = Passing(qi)
-    extra[#extra + 1] = { key = "quests", title = L["Quest rewards"], h = 28, right = FitText(fit, #qi), markColor = fit > 0 and C.green or nil }
+    extra[#extra + 1] = { key = "quests", title = L["Quest rewards"], h = 28, right = FitText(fit, #qi),
+      fit = fit, all = #qi, rightWidth = RightW("boss"), markColor = fit > 0 and C.green or nil }
   end
   if #extra > 0 and #out > 0 then out[#out + 1] = { kind = "divider", text = L["More"] } end
   for _, e in ipairs(extra) do out[#out + 1] = e end
@@ -293,6 +320,7 @@ local function SelectEntry(entry)
   if not ns.DROPS[sel.inst] then return end
   ns.db.last.inst, ns.db.last.entry = sel.inst, entry
   local it = Find(W.bossList, entry)
+  MarkSelected(W.bossList, entry)
   W.bossList:Select(it)
   if it then W.bossList:ScrollTo(it) end
   RefreshLoot()
@@ -304,6 +332,7 @@ local function SelectInstance(id, entry)
   sel.inst = id
   sel.showAll = false
   local it = Find(W.instList, id)
+  MarkSelected(W.instList, id)
   W.instList:Select(it)
   if it then W.instList:ScrollTo(it) end
   W.instDrop:Update(id)
@@ -350,6 +379,7 @@ end
 
 local function RefreshInstances()
   W.instList:SetItems(InstanceItems())
+  MarkSelected(W.instList, sel.inst)
   W.instList:Select(Find(W.instList, sel.inst))
 end
 
@@ -359,8 +389,9 @@ end
 function Place(win, w, h, mode)
   if not W or not W.built then return end
   W.mode = mode
-  local instW = mode == "full" and 230 or mode == "overlay" and 200 or 0
-  local bossW = mode == "full" and 230 or 200
+  -- (18.11.2026) a wider window gives the names more room first (up to 280 and 260), the loot keeps the rest
+  local instW = mode == "full" and math.max(230, math.min(280, math.floor(w * 0.27))) or mode == "overlay" and 200 or 0
+  local bossW = mode == "full" and math.max(230, math.min(260, math.floor(w * 0.25))) or 200
   local lootW = w - instW - bossW
   -- instances
   if instW > 0 then
@@ -644,6 +675,7 @@ function ns.RefreshBig()
   local d = ns.DROPS[sel.inst]
   if d then
     W.bossList:SetItems(BossItems(d))
+    MarkSelected(W.bossList, sel.entry)
     W.bossList:Select(Find(W.bossList, sel.entry))
   end
   if sel.inst and sel.entry ~= nil then RefreshLoot(true) end

@@ -1,5 +1,12 @@
 # Changes
 
+## 0.12.0
+
+- **Two new dungeons:** Blackmaw Hold (levels 55-60) and The Shaper's Terrace (58-60) with their quest rewards; their bosses and loot follow as soon as they are known.
+- **Full names in the large window:** instance and boss names such as "Ruins of Lordaeron" or "Shadowfang Keep" now fit, a wider window gives the names more room first.
+- **Selected row easy to read:** in the game's look the level of the selected instance stands in white on the gold band.
+- **Small window:** in the game's look the title is the instance's name, e.g. "Ruins of Lordaeron".
+
 ## 0.11.0
 
 - **Dropdon in the game's look:** the large loot window now has the game's own frame, buttons and lists, and the small window sits on the game's tooltip ground. The options open in the game's settings (Options > AddOns > Dropdon). This is the new default; the Don look is one switch away under Appearance, "Windows in the game's look".

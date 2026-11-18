@@ -1,4 +1,4 @@
-local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 28)
+local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 29)
 
 ---------------------------------------------------------------------------
 -- DonCore module "Kit" (minor 1, 01.11.2026, STYLEKIT_PLAN.md "Schritt 2"; minor 2, 02.11.2026: Kit.IconButton, the symbols from
@@ -82,7 +82,7 @@ local Kit = LibStub("DonCore-1.0"):NewModule("Kit", 28)
 ---------------------------------------------------------------------------
 if not Kit then return end -- the same or a newer Kit is loaded already
 local Core = LibStub("DonCore-1.0")
-Kit.VERSION = 28
+Kit.VERSION = 29
 
 local WHITE = "Interface\\Buttons\\WHITE8x8"
 local floor, ceil, max, min, abs, pi, sin, cos = math.floor, math.ceil, math.max, math.min, math.abs, math.pi, math.sin, math.cos
@@ -1637,6 +1637,7 @@ end
 -- item.static = no folding (a section title)
 -- (minor 3) item.color (the title in a status colour, e.g. "green"), item.right (a short text before the count, e.g. "show"),
 -- item.tooltipFn(row); item.plainCase keeps the case of the text (dates, names)
+-- (minor 29, Profitdon writs: continents over zones) item.indent: pixels the arrow and the text move right (a sub group)
 function Kit.GroupHeader(parent)
   local r = RowBase(parent, S.sub, C.group)
   r.mark:Hide()
@@ -1649,6 +1650,8 @@ function Kit.GroupHeader(parent)
   function r:SetItem(it)
     self.item = it
     self.arrow:SetText(it.static and "" or it.collapsed and "+" or "-")
+    self.arrow:ClearAllPoints()
+    self.arrow:SetPoint("LEFT", S.pad - 2 + (tonumber(it.indent) or 0), 0)
     local t = tostring(it.text or "")
     self.text:SetText(it.plainCase and t or Upper(t))
     TextColor(self.text, it.color or C.txGold)
@@ -1661,7 +1664,7 @@ function Kit.GroupHeader(parent)
   end
   function r:Layout(w)
     self._w = w
-    local x = self.item and self.item.static and S.pad or S.pad + 14
+    local x = (self.item and self.item.static and S.pad or S.pad + 14) + (self.item and tonumber(self.item.indent) or 0)
     self.text:ClearAllPoints()
     self.text:SetPoint("LEFT", x, 0)
     Kit.Fit(self.count, max(60, floor(w * 0.45)))

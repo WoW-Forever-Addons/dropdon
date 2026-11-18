@@ -62,7 +62,13 @@ function Rebuild()
   local id, d = Instance()
   panel:ClearRows()
   local name = d and ns.InstanceName(id, d) or ""
-  panel:SetTitle("DROPDON" .. (name ~= "" and ("  |c" .. C.txGold.hex .. Kit.Upper(name) .. "|r") or ""))
+  -- (18.11.2026, Daniel's picture: "DROPDON  RUINS OF...") in the game's look the instance alone in the game's gold and
+  -- normal writing (the panel sets the gold), as the game's own windows name what they show; Don's look keeps its wordmark
+  if panel.blizzLook then
+    panel:SetTitle(name ~= "" and name or "Dropdon")
+  else
+    panel:SetTitle("DROPDON" .. (name ~= "" and ("  |c" .. C.txGold.hex .. Kit.Upper(name) .. "|r") or ""))
+  end
   if not d then
     Style.Row(panel):SetText(L["Choose an instance."], "textHint")
     return
