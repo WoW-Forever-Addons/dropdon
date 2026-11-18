@@ -126,3 +126,13 @@ L["Loot window"] = "전리품 창"
 L["Mini window"] = "미니 창"
 L["All options"] = "모든 설정"
 L["Left click: window. Right click: menu. Drag: move."] = "왼쪽 클릭: 창. 오른쪽 클릭: 메뉴. 드래그: 이동."
+-- (16.11.2026) Blizzard look of both windows
+L["Windows in the game's look"] = "게임 스타일의 창"
+L["Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload."] = "Dropdon의 창이 게임 자체의 창처럼 보입니다: 큰 창은 게임의 테두리, 버튼, 목록으로, 작은 창은 게임 툴팁 배경 위에 표시됩니다. 설정은 /reload 후 게임 설정(설정 > 애드온 > Dropdon)에서 열립니다."
+L["The large window could not be built in the game's look, it opens in the Don look."] = "큰 창을 게임 스타일로 만들 수 없어 Don 스타일로 엽니다."
+-- (16.11.2026) /dd diag: the copy window
+L["Diagnostics"] = "진단"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A로 모두 선택, Ctrl+C로 복사합니다."
+L["Select all"] = "모두 선택"
+L["Close"] = "닫기"
+L["diagnostics in a window to copy"] = "복사용 창에 진단 표시"

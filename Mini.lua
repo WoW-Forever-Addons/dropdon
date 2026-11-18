@@ -17,6 +17,10 @@ local ICON = 28
 local panel, gridFrame, grid, mineFrame, mine
 local boss -- chosen boss index
 local Rebuild
+-- (16.11.2026, Blizzard look for all Don addons, pattern Luredon/Panel.lua) with the option blizzLook the panel wears
+-- the game's look (DonCore Blizz PanelLook: Style's game look on the game's tooltip box), the switch and the item grid
+-- come from the game's blocks. One set of parts per kit, switched live with the option.
+local partsOf = {}
 
 local function Instance()
   local id = ns.db.last.inst
@@ -96,19 +100,59 @@ local function Build()
       { key = "options", donOptions = "Dropdon", hint = "/dd options", onClick = function() ns.OpenOptions() end } },
   })
   ns.TrackPanel(panel)
-  mineFrame = CreateFrame("Frame", nil, UIParent)
-  mine = Kit.Toggle(mineFrame, { label = L["Only for me"], get = Mine, set = function() ns.MiniToggleMine() end })
-  mine:SetPoint("LEFT", mineFrame, "LEFT", 2, 0)
-  mine:SetTooltip(L["Only for me"], { L["Hides items restricted to other classes."], L["Hides armor and weapon types your class cannot use."] })
-  gridFrame = CreateFrame("Frame", nil, UIParent)
-  grid = Kit.ItemGrid(gridFrame, { size = ICON, gap = 4 })
-  grid:SetPoint("TOPLEFT", gridFrame, "TOPLEFT", 0, -2)
   if Style.WidthGrip then
     Style.WidthGrip(panel, { min = MIN_W, max = MAX_W, onWidth = function() Rebuild() end,
       tooltip = { L["Window width"], { L["Drag: width of the window."] } } })
   end
   if type(UISpecialFrames) == "table" then table.insert(UISpecialFrames, "DropdonMiniPanel") end
+  ns.ApplyMiniLook()
 end
+
+-- the switch "Only for me" and the item grid from one kit (made once per kit)
+local function MakeParts(kit)
+  local p = { kit = kit }
+  p.mineFrame = CreateFrame("Frame", nil, UIParent)
+  p.mine = kit.Toggle(p.mineFrame, { label = L["Only for me"], get = Mine, set = function() ns.MiniToggleMine() end })
+  p.mine:SetPoint("LEFT", p.mineFrame, "LEFT", 2, 0)
+  p.mine:SetTooltip(L["Only for me"], { L["Hides items restricted to other classes."], L["Hides armor and weapon types your class cannot use."] })
+  p.gridFrame = CreateFrame("Frame", nil, UIParent)
+  p.grid = kit.ItemGrid(p.gridFrame, { size = ICON, gap = 4 })
+  p.grid:SetPoint("TOPLEFT", p.gridFrame, "TOPLEFT", 0, -2)
+  return p
+end
+
+local function UseParts(p)
+  if mineFrame and mineFrame ~= p.mineFrame then mineFrame:Hide() gridFrame:Hide() end
+  p.mineFrame:Show() p.gridFrame:Show()
+  mineFrame, mine, gridFrame, grid = p.mineFrame, p.mine, p.gridFrame, p.grid
+end
+
+-- the option blizzLook (or the client's templates) decides: the game's look or Don's; built anew while shown
+function ns.ApplyMiniLook()
+  if not panel then return end
+  local kit, blizz, Bz = ns.LookKit()
+  if blizz then
+    if not partsOf[kit] then
+      local ok, p = pcall(MakeParts, kit)
+      if ok then partsOf[kit] = p else blizz = false end
+    end
+  end
+  if not blizz then kit = Kit end
+  local was = panel.blizzLook and true or false
+  if blizz and Bz and Bz.PanelLook then
+    Bz.PanelLook(panel, true)
+  elseif panel.blizzLook then
+    local B = Core:Get("Blizz", 3)
+    if B then B.PanelLook(panel, false) end
+  end
+  partsOf[kit] = partsOf[kit] or MakeParts(kit)
+  UseParts(partsOf[kit])
+  -- the opacity and the rest of the shared settings once more onto the new ground
+  if was ~= (panel.blizzLook and true or false) and ns.ApplyPanelSettings then ns.ApplyPanelSettings() end
+  if panel:IsShown() then Rebuild() end
+end
+-- "blizzard" or "kit" (tests, diagnostics)
+function ns.MiniLook() return panel and panel.blizzLook and "blizzard" or "kit" end
 
 function ns.MiniSelectBoss(i)
   boss = (boss ~= i) and i or nil

@@ -1,5 +1,11 @@
 # Changes
 
+## 0.11.0
+
+- **Dropdon in the game's look:** the large loot window now has the game's own frame, buttons and lists, and the small window sits on the game's tooltip ground. The options open in the game's settings (Options > AddOns > Dropdon). This is the new default; the Don look is one switch away under Appearance, "Windows in the game's look".
+- **`/dd diag`:** new report for bug reports. It opens in a window you can copy from; `/dd diag chat` prints it in the chat.
+- **Level colours like the game's:** the level range of each instance is coloured the way the game colours quest levels for your level.
+
 ## 0.10.0
 
 - **New dungeon: Alcaz Prison** (levels 48-53) with its four bosses, their loot and the quest rewards.

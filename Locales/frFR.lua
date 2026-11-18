@@ -126,3 +126,13 @@ L["Loot window"] = "Fenêtre de butin"
 L["Mini window"] = "Mini-fenêtre"
 L["All options"] = "Toutes les options"
 L["Left click: window. Right click: menu. Drag: move."] = "Clic gauche : fenêtre. Clic droit : menu. Glisser : déplacer."
+-- (16.11.2026) Blizzard look of both windows
+L["Windows in the game's look"] = "Fenêtres dans le style du jeu"
+L["Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload."] = "Les fenêtres de Dropdon ressemblent à celles du jeu : la grande fenêtre avec le cadre, les boutons et les listes du jeu, la petite fenêtre sur le fond des infobulles du jeu. Les options s'ouvrent alors dans les réglages du jeu (Options > AddOns > Dropdon) après un /reload."
+L["The large window could not be built in the game's look, it opens in the Don look."] = "La grande fenêtre n'a pas pu être construite dans le style du jeu, elle s'ouvre dans le style Don."
+-- (16.11.2026) /dd diag: the copy window
+L["Diagnostics"] = "Diagnostic"
+L["Ctrl+A selects all, Ctrl+C copies."] = "Ctrl+A sélectionne tout, Ctrl+C copie."
+L["Select all"] = "Tout sélectionner"
+L["Close"] = "Fermer"
+L["diagnostics in a window to copy"] = "diagnostic dans une fenêtre à copier"

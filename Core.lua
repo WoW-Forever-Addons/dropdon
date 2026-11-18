@@ -22,7 +22,25 @@ ns.defaults = {
   panelScale = 1,
   panelAlpha = 0.82, -- background opacity (same as Style.DEFAULT_ALPHA)
   combatFade = false,
+  -- (16.11.2026, Daniel: "Sollte Standart sein", like Luredon 1.7.0) both windows from the game's own templates
+  -- (DonCore Blizz); without them in the client the Don look stays, without a word
+  blizzLook = true,
 }
+-- (16.11.2026, Blizzard look for all Don addons, pattern Luredon/Core.lua) the one place that says which kit builds
+-- Dropdon's windows: DonCore's Kit, or with the option blizzLook the same blocks from the game's own templates (DonCore
+-- module Blizz). Returns the kit, true when it is Blizzard's, the Blizz module and the reason ("blizzard", "kit",
+-- "kit (missing: ...)").
+function ns.LookKit()
+  local Core = LibStub("DonCore-1.0")
+  local Kit = Core:Get("Kit", 10) or Core:Get("Kit", 1)
+  if not (ns.db and ns.db.blizzLook) then return Kit, false, nil, "kit" end
+  local Bz = Core:Get("Blizz", 5)
+  if not Bz then return Kit, false, nil, "kit (no DonCore Blizz)" end
+  local kit, miss = Bz.Kit()
+  if not kit then return Kit, false, Bz, "kit (missing: " .. tostring(miss) .. ")" end
+  return kit, true, Bz, "blizzard"
+end
+
 ns.SCHEMA = 1
 ns.WORDMARK = "|cff3fa9f5Drop|rdon"
 
@@ -209,8 +227,99 @@ ns.COMMANDS = {
   { "/dd options", "open the options" },
   { "/dd button", "show or hide the minimap button" },
   { "/dd tooltip", "show or hide the drop line in item tooltips" },
+  { "/dd diag", "diagnostics in a window to copy" },
   { "/dd help", "this list" },
 }
+
+---------------------------------------------------------------------------
+-- (16.11.2026, Daniel: "bei allen addons soll der diag befehl ein fenster zum kopieren aufmachen") /dd diag: the facts
+-- in one copy window (game look with blizzLook and the game's templates, else DonCore's Kit, else the chat);
+-- /dd diag chat prints them as before. No character or realm names.
+---------------------------------------------------------------------------
+local function Meta(field)
+  local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+  local v = get and ns.Call(get, addonName, field)
+  return type(v) == "string" and v ~= "" and v or "?"
+end
+
+local function YesNo(v) return v and "on" or "off" end
+
+function ns.DiagLines()
+  local out = {}
+  local function Add(s) out[#out + 1] = s end
+  Add("Dropdon " .. Meta("Version") .. " diag")
+  local version, build, _, toc
+  if GetBuildInfo then
+    local ok, a, b, c, d = pcall(GetBuildInfo)
+    if ok then version, build, toc = a, b, d end
+  end
+  Add(("Client: %s build %s toc %s, locale %s%s"):format(tostring(version or "?"), tostring(build or "?"), tostring(toc or "?"),
+    tostring(ns.Call(GetLocale) or "?"), (ns.IsEra and ns.Call(ns.IsEra)) and ", Classic Era" or ""))
+  -- the loot data: instances, bosses, items (bosses, quest rewards, shared drops), ATT files new / old
+  local inst, raids, bosses, items, seen, new, old = 0, 0, 0, 0, {}, 0, 0
+  local function Count(list)
+    for _, e in ipairs(type(list) == "table" and list or {}) do
+      local ids = type(e) == "table" and e.items or nil
+      if type(e) == "number" then ids = { e } end
+      for _, id in ipairs(type(ids) == "table" and ids or {}) do
+        if not seen[id] then seen[id], items = true, items + 1 end
+      end
+    end
+  end
+  for _, d in pairs(type(ns.DROPS) == "table" and ns.DROPS or {}) do
+    inst = inst + 1
+    if d.raid then raids = raids + 1 end
+    if d.src == "old" then old = old + 1 else new = new + 1 end
+    bosses = bosses + #(d.bosses or {})
+    Count(d.bosses) Count(d.quests) Count(d.common)
+  end
+  Add(("Data: %d instances (%d dungeons, %d raids), %d bosses, %d items; ATT files new %d, old %d"):format(
+    inst, inst - raids, raids, bosses, items, new, old))
+  local here = ns.CurrentInstance and ns.Call(ns.CurrentInstance)
+  Add("Here: " .. (here and (tostring(ns.DROPS[here] and ns.DROPS[here].name or "?") .. " (" .. tostring(here) .. ")") or "no instance"))
+  local db = ns.db or {}
+  Add(("Options: mode %s, blizzLook %s, autoSelect %s, tooltip %s, minimapButton %s"):format(tostring(db.mode),
+    YesNo(db.blizzLook), YesNo(db.autoSelect), YesNo(db.tooltip), YesNo(db.minimapButton)))
+  Add(("Windows: locked %s, scale %s, opacity %s, combatFade %s"):format(YesNo(db.panelLocked), tostring(db.panelScale),
+    tostring(db.panelAlpha), YesNo(db.combatFade)))
+  local f = type(db.filters) == "table" and db.filters or {}
+  Add(("Filters: class %s, usable %s, slot %s"):format(YesNo(f.class ~= false), YesNo(f.usable ~= false), tostring(f.slot or "ALL")))
+  local _, _, _, why = ns.LookKit()
+  Add(("Look: large window %s, small window %s, options %s (option says %s)"):format(
+    tostring(ns.WindowLook and ns.WindowLook() or "?"), tostring(ns.MiniLook and ns.MiniLook() or "?"),
+    tostring(ns.OptionsLook and ns.OptionsLook() or "?"), tostring(why)))
+  if #errors == 0 then
+    Add("Errors: none")
+  else
+    Add("Errors: " .. #errors)
+    for _, e in ipairs(errors) do Add(("  %s: %s (x%d)"):format(tostring(e.context), tostring(e.msg), e.count)) end
+  end
+  return out
+end
+
+function ns.PrintDiag()
+  for _, line in ipairs(ns.DiagLines()) do ns.Print(line) end
+end
+
+-- the copy window; returns the dialog, or nil when it went to the chat
+function ns.ShowDiag()
+  local text = table.concat(ns.DiagLines(), "\n")
+  local title, hint = "Dropdon diag · " .. L["Diagnostics"], L["Ctrl+A selects all, Ctrl+C copies."]
+  local words = { selectAll = L["Select all"], close = L["Close"] }
+  local UI, blizz = ns.LookKit()
+  if blizz and UI and UI.ShowCopy then
+    local ok, d = pcall(UI.ShowCopy, title, hint, text, words)
+    if ok and d then return d end
+    pcall(Record, "diag blizz look", ok and "no dialog" or d)
+  end
+  local Kit = LibStub("DonCore-1.0"):Get("Kit", 1)
+  if Kit and Kit.ShowCopy then
+    local ok, d = pcall(Kit.ShowCopy, title, hint, text, words)
+    if ok and d then return d end
+    pcall(Record, "diag window", ok and "no dialog" or d)
+  end
+  ns.PrintDiag()
+end
 
 function ns.PrintHelp()
   ns.Print(L["Commands:"])
@@ -231,6 +340,10 @@ function ns.Slash(msg)
   elseif msg == "tooltip" then
     ns.db.tooltip = ns.db.tooltip == false
     ns.Print(ns.db.tooltip and L["Tooltip line on."] or L["Tooltip line off."])
+  elseif msg == "diag" then
+    ns.ShowDiag()
+  elseif msg == "diag chat" then
+    ns.PrintDiag()
   elseif msg == "help" or msg == "?" or msg == "hilfe" then
     ns.PrintHelp()
   else

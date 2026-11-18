@@ -15,6 +15,12 @@ local C = Kit.C
 -- Under 960 px the first two columns get narrower, under 800 px the instance column goes and a dropdown above the
 -- bosses chooses the instance. Every text one line, cut with "...", the whole text in the tooltip.
 ---------------------------------------------------------------------------
+-- (16.11.2026, Blizzard look for all Don addons, pattern Luredon/Book.lua) the window takes its blocks from UI: the Kit,
+-- or with the option blizzLook (on by default) the same blocks from the game's own templates (DonCore module Blizz).
+-- Picked when the window is built (PickUI); a build that fails with Blizzard's blocks is done again with the Kit and
+-- says so once in the chat. ns.WindowLook() says which one runs and why.
+local UI = Kit
+local lookNote = "kit"
 local W -- the Kit.Window
 local sel = { inst = nil, entry = nil, showAll = false }
 local hiddenCount = 0
@@ -352,6 +358,7 @@ end
 ---------------------------------------------------------------------------
 function Place(win, w, h, mode)
   if not W or not W.built then return end
+  W.mode = mode
   local instW = mode == "full" and 230 or mode == "overlay" and 200 or 0
   local bossW = mode == "full" and 230 or 200
   local lootW = w - instW - bossW
@@ -412,9 +419,10 @@ end
 ---------------------------------------------------------------------------
 -- Build
 ---------------------------------------------------------------------------
+-- a line between the columns: Don's muted gold, in the game's look the light line of the game's column heads
 local function Line(parent, vertical)
   local t = parent:CreateTexture(nil, "ARTWORK")
-  t:SetColorTexture(C.goldMuted[1], C.goldMuted[2], C.goldMuted[3], 1)
+  if UI.blizzLook then t:SetColorTexture(1, 1, 1, 0.16) else t:SetColorTexture(C.goldMuted[1], C.goldMuted[2], C.goldMuted[3], 1) end
   if vertical then
     t:SetPoint("TOPRIGHT") t:SetPoint("BOTTOMRIGHT") t:SetWidth(1)
   else
@@ -423,19 +431,49 @@ local function Line(parent, vertical)
   return t
 end
 
+-- a column; its Don ground only in the Kit's look (the game's lists bring their own ground)
 local function Column(parent)
   local f = CreateFrame("Frame", nil, parent)
-  local bg = f:CreateTexture(nil, "BACKGROUND")
-  bg:SetAllPoints()
-  bg:SetColorTexture(C.panel[1], C.panel[2], C.panel[3], 1)
+  if not UI.blizzLook then
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(C.panel[1], C.panel[2], C.panel[3], 1)
+  end
   Line(f, true)
   return f
 end
 
+-- size, scale, lock: the options of Dropdon's appearance page (once; the window may be built again in the other look)
+local function ApplyLook()
+  if not W then return end
+  -- (Kit minor 13) the size option on top of the shared window scale of all Don windows; the game's frame takes it as is
+  W:SetOwnScale(tonumber(ns.db.panelScale) or 1)
+  -- lock: the head without the mouse (the Kit's way); the game's frame also by SetLocked (it drags by its body too)
+  if W.header and W.header.EnableMouse then W.header:EnableMouse(not ns.db.panelLocked) end
+  if W.blizz and W.SetLocked then W:SetLocked(ns.db.panelLocked) end
+end
+ns.TrackPanel({
+  ApplySettings = ApplyLook,
+  ResetPosition = function()
+    if type(ns.db.win) == "table" then
+      ns.db.win.point, ns.db.win.relPoint, ns.db.win.x, ns.db.win.y = nil, nil, nil, nil
+      -- the game's frame keeps its place in win.bz (DonCore Blizz)
+      if type(ns.db.win.bz) == "table" then ns.db.win.bz.point, ns.db.win.bz.rel, ns.db.win.bz.x, ns.db.win.bz.y = nil, nil, nil, nil end
+    end
+    if not W then return end
+    W:ClearAllPoints()
+    W:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
+  end,
+})
+
 local function Build()
   ns.db.win = type(ns.db.win) == "table" and ns.db.win or {}
-  W = Kit.Window("DropdonPanel", { title = "Dropdon", logo = "Interface\\Icons\\INV_Misc_Bag_10",
-    options = "Dropdon", hint = "/dd options", footer = true, store = ns.db.win, width = 1000, height = 600,
+  local blizz = UI ~= Kit
+  -- the Kit's windows show at 80 %, the game's frame at 100 %: about the same size on the screen
+  W = UI.Window(blizz and "DropdonPanelBlizz" or "DropdonPanel", { title = "Dropdon", logo = "Interface\\Icons\\INV_Misc_Bag_10",
+    options = "Dropdon", hint = "/dd options", footer = true, store = ns.db.win,
+    width = blizz and 860 or 1000, height = blizz and 540 or 600,
+    min = blizz and { 580, 400 } or nil, max = blizz and { 1300, 900 } or nil, -- min: the Kit's 720 at its 80 %
     buttons = { { kind = "collapse", key = "mini", tooltip = L["Small window"],
       onClick = function() ns.HideBig() if ns.ShowMini then ns.ShowMini() end end } },
     onLayout = function(win, w, h, mode) Place(win, w, h, mode) end })
@@ -443,37 +481,37 @@ local function Build()
   -- instances
   W.instCol = Column(W.body)
   W.instCol:SetPoint("TOPLEFT", W.body, "TOPLEFT", 0, 0)
-  W.search = Kit.SearchBox(W.instCol, { placeholder = L["Search instance"], onChange = function(t)
+  W.search = UI.SearchBox(W.instCol, { placeholder = L["Search instance"], onChange = function(t)
     W.query = tostring(t or ""):lower()
     RefreshInstances()
   end })
   W.search:SetPoint("TOPLEFT", W.instCol, "TOPLEFT", GAP, -6)
-  W.instList = Kit.List(W.instCol, {
+  W.instList = UI.List(W.instCol, {
     onClick = function(it) if it.key then SelectInstance(it.key) end end,
     onToggle = function(it) ns.db.closed[it.group] = it.collapsed and true or nil RefreshInstances() end })
   W.instList:SetPoint("TOPLEFT", W.instCol, "TOPLEFT", 0, -SEARCH)
   -- bosses
   W.bossCol = Column(W.body)
-  W.instDrop = Kit.Dropdown(W.bossCol, { width = 180, items = DropItems, get = function() return sel.inst end,
+  W.instDrop = UI.Dropdown(W.bossCol, { width = 180, items = DropItems, get = function() return sel.inst end,
     set = function(v) SelectInstance(v) end })
-  W.bossHead = Kit.GroupHeader(W.bossCol)
-  W.bossList = Kit.List(W.bossCol, { onClick = function(it) if it.key ~= nil then SelectEntry(it.key) end end })
+  W.bossHead = UI.GroupHeader(W.bossCol)
+  W.bossList = UI.List(W.bossCol, { onClick = function(it) if it.key ~= nil then SelectEntry(it.key) end end })
   -- loot
   W.lootCol = CreateFrame("Frame", nil, W.body)
-  W.lootHead = Kit.GroupHeader(W.lootCol)
+  W.lootHead = UI.GroupHeader(W.lootCol)
   W.lootHead:SetPoint("TOPLEFT", W.lootCol, "TOPLEFT", 0, 0)
   W.bar = CreateFrame("Frame", nil, W.lootCol)
   W.bar:SetPoint("TOPLEFT", W.lootCol, "TOPLEFT", 0, -HEAD)
   Line(W.bar)
   local function Switch(key, label, tip)
-    local t = Kit.Toggle(W.bar, { label = label, get = function() return ns.Filters()[key] == true end,
+    local t = UI.Toggle(W.bar, { label = label, get = function() return ns.Filters()[key] == true end,
       set = function(v) ns.Filters()[key] = v and true or false sel.showAll = false ns.RefreshBig() if ns.RefreshMini then ns.RefreshMini() end end })
     t:SetTooltip(label, { tip })
     return t
   end
   W.myClass = Switch("class", L["My class"], L["Hides items restricted to other classes."])
   W.usable = Switch("usable", L["Usable"], L["Hides armor and weapon types your class cannot use."])
-  W.slot = Kit.Dropdown(W.bar, { width = 140,
+  W.slot = UI.Dropdown(W.bar, { width = 140,
     items = function()
       local list = { { value = "ALL", text = L["All slots"] } }
       for _, s in ipairs(ns.SLOTS) do list[#list + 1] = { value = s[1], text = ns.SlotLabel(s[1]) } end
@@ -482,12 +520,12 @@ local function Build()
     get = function() return ns.Filters().slot end,
     set = function(v) ns.Filters().slot = v sel.showAll = false RefreshLoot() end })
   W.slot:SetTooltip(L["Slot"], { L["Click: choose a slot."] })
-  W.hiddenChip = Kit.Chip(W.bar, L["Hidden"], function()
+  W.hiddenChip = UI.Chip(W.bar, L["Hidden"], function()
     sel.showAll = not sel.showAll
     RefreshLoot(true)
   end)
   W.hiddenChip:SetTooltip(L["Hidden"], { L["Shows the items your filters hide, dimmed, with the reason in the tooltip."] })
-  W.table = Kit.Table(W.lootCol, { columns = Columns(),
+  W.table = UI.Table(W.lootCol, { columns = Columns(),
     onSort = function(key)
       local s = ns.db.sort
       if type(s) ~= "table" then s = {} ns.db.sort = s end
@@ -496,30 +534,53 @@ local function Build()
       RefreshLoot(true)
     end })
   if type(ns.db.sort) == "table" and ns.db.sort.key then W.table:SetSort(ns.db.sort.key, ns.db.sort.asc) end
-  W.showAll = Kit.Button(W.table, "", { small = true, onClick = function() sel.showAll = true RefreshLoot() end })
+  W.showAll = UI.Button(W.table, "", { small = true, onClick = function() sel.showAll = true RefreshLoot() end })
   W.showAll:SetPoint("TOP", W.table, "TOP", 0, -24 - 56)
   W.showAll:SetWidth(220)
   W.showAll:Hide()
   W.built = true
-  -- size, scale, lock: the options of Dropdon's appearance page
-  ns.TrackPanel({
-    ApplySettings = function()
-      if W.SetOwnScale then W:SetOwnScale(tonumber(ns.db.panelScale) or 1) elseif W.SetScale then W:SetScale(tonumber(ns.db.panelScale) or 1) end
-      if W.header and W.header.EnableMouse then W.header:EnableMouse(not ns.db.panelLocked) end
-    end,
-    ResetPosition = function()
-      ns.db.win.point, ns.db.win.relPoint, ns.db.win.x, ns.db.win.y = nil, nil, nil, nil
-      W:ClearAllPoints()
-      W:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-    end,
-  })
-  -- (Kit minor 13) the size option on top of the shared window scale of all Don windows
-  if W.SetOwnScale then W:SetOwnScale(tonumber(ns.db.panelScale) or 1) elseif W.SetScale then W:SetScale(tonumber(ns.db.panelScale) or 1) end
-  if W.header and W.header.EnableMouse then W.header:EnableMouse(not ns.db.panelLocked) end
+  -- (Kit minor 13) the size option on top of the shared window scale of all Don windows; the game's frame takes it as is
+  ApplyLook()
   W:Layout()
   RefreshInstances()
   local id, entry = DefaultInstance()
   if id then SelectInstance(id, entry) end
+end
+
+local said
+local function SayLook()
+  if said then return end
+  said = true
+  ns.Print(L["The large window could not be built in the game's look, it opens in the Don look."])
+end
+
+local function PickUI()
+  local kit, blizz, _, why = ns.LookKit()
+  UI, lookNote = blizz and kit or Kit, why or "kit"
+end
+
+local function Create()
+  PickUI()
+  if UI == Kit then Build() return end
+  -- Blizzard's blocks: any error while building leaves the half-built window hidden and the Kit builds it
+  local ok, err = pcall(Build)
+  if ok then return end
+  if W and W.Hide then pcall(W.Hide, W) end
+  W = nil
+  UI, lookNote = Kit, "kit (error: " .. tostring(err) .. ")"
+  SayLook()
+  Build()
+end
+
+-- "blizzard" or "kit", with the reason when the option is on and the Kit had to build (tests, diagnostics)
+function ns.WindowLook() return lookNote end
+-- the option blizzLook changed: the window is built again in the other look the next time it opens (it was open: now)
+function ns.WindowReset()
+  if not W then return end
+  local open = W:IsShown()
+  W:Hide()
+  W = nil
+  if open then ns.ToggleBig() end
 end
 
 -- For tests and diagnostics: the selection, the lists, the loot table and the ids it shows.
@@ -535,7 +596,7 @@ end
 function ns.DefaultInstance() return DefaultInstance() end
 
 function ns.ToggleBig()
-  if not W then Build() end
+  if not W then Create() end
   if W:IsShown() then
     W:Hide()
   else

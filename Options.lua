@@ -15,13 +15,18 @@ local PAGES = {
   { title = "Appearance", tip = "Windows: lock, size, background opacity, dim in combat.", items = {
     { header = "Window" },
     { kind = "button", name = "Large window", button = "Show / hide", tip = "The window with all instances, bosses and their loot. /dd",
-      onClick = function() ns.ToggleBig() end, state = function() local p = _G.DropdonPanel return p ~= nil and p:IsShown() and true or false end },
+      onClick = function() ns.ToggleBig() end, state = function() return ns.BigShown and ns.BigShown() or false end },
     { kind = "button", name = "Small window", button = "Show / hide", tip = "The small window with the bosses of your instance. /dd mini",
       onClick = function() ns.ToggleMini() end, state = function() return ns.MiniShown and ns.MiniShown() or false end },
     { key = "panelLocked", name = "Lock window", tip = "The windows can no longer be dragged.", onChange = ApplyPanel },
     { key = "panelScale", kind = "slider", name = "Size", tip = "Size of both windows.", min = 0.6, max = 1.6, step = 0.05, onChange = ApplyPanel },
     { key = "panelAlpha", kind = "slider", name = "Background opacity", tip = "How opaque the window background is. Text stays fully visible.", min = 0, max = 1, step = 0.05, onChange = ApplyPanel },
     { key = "combatFade", name = "Dim in combat", tip = "Dims the whole window to 40 % while you are in combat.", onChange = ApplyPanel },
+    -- (16.11.2026, Daniel: "Sollte Standart sein", like Luredon 1.7.0) both windows from the game's own templates
+    { key = "blizzLook", name = "Windows in the game's look", tip = "Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload.", onChange = function()
+      if ns.WindowReset then ns.WindowReset() end
+      if ns.ApplyMiniLook then ns.ApplyMiniLook() end
+    end },
     { kind = "button", name = "Reset position", button = "Reset", tip = "Puts both windows back to their default place.",
       onClick = function() ns.ResetPanelPosition() end },
   } },
@@ -44,7 +49,7 @@ end
 local TOOLS = {
   -- (02.11.2026) on / off tools show their state in DonCore's options window (state)
   { "Large window", "Show / hide", function() ns.ToggleBig() end, "The window with all instances, bosses and their loot. /dd",
-    state = function() local p = _G.DropdonPanel return p ~= nil and p:IsShown() and true or false end },
+    state = function() return ns.BigShown and ns.BigShown() or false end },
   { "Small window", "Show / hide", function() ns.ToggleMini() end, "The small window with the bosses of your instance. /dd mini",
     state = function() return ns.MiniShown and ns.MiniShown() or false end },
   { "Commands", "Show", function() ns.PrintHelp() end, "Lists the chat commands. /dd help" },
@@ -58,13 +63,32 @@ local function Help()
   return table.concat(lines, "\n")
 end
 
+-- (16.11.2026, DonCore Settings 3 / Options 6, pattern Luredon/Options.lua) with the option blizzLook the options are the
+-- game's own settings pages: built in full at login (only where the client has the templates: without them the
+-- windows are Don's and so is the options window), and every cog and /dd options ends there (redirect).
+local fullPages = false
 local function Build()
-  category = ns.BuildSettings({ name = "Dropdon", status = Status, tools = TOOLS, pages = PAGES, help = Help })
+  -- (Options 7) FromSettings hands spec.redirect on to DonCore's options window
+  local spec = { name = "Dropdon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
+    redirect = function() return ns.OpenGameOptions() end }
+  if ns.db and ns.db.blizzLook and select(2, ns.LookKit()) then spec.fullPages, fullPages = true, true end
+  category = ns.BuildSettings(spec)
 end
+
+-- true when the game's settings were opened at Dropdon (option blizzLook, pages built in full at login, not in combat)
+function ns.OpenGameOptions()
+  if not (ns.db and ns.db.blizzLook and fullPages and category and Settings and Settings.OpenToCategory) then return false end
+  if InCombatLockdown and InCombatLockdown() then ns.Print(L["Options cannot be opened in combat."]) return true end
+  Settings.OpenToCategory(category:GetID())
+  return true
+end
+-- "game settings" or "don window" (tests, diagnostics)
+function ns.OptionsLook() return fullPages and "game settings" or "don window" end
 
 -- (01.11.2026) DonCore's options window of all Don addons (no Blizzard panel, so also in combat); Blizzard's settings
 -- only when that window is not there (an older DonCore), and those stay closed in combat.
 function ns.OpenOptions()
+  if ns.OpenGameOptions() then return end
   if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if InCombatLockdown and InCombatLockdown() then
     ns.Print(L["Options cannot be opened in combat."])
