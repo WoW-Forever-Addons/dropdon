@@ -127,8 +127,6 @@ L["Mini window"] = "迷你視窗"
 L["All options"] = "所有選項"
 L["Left click: window. Right click: menu. Drag: move."] = "左鍵點擊：視窗。右鍵點擊：選單。拖曳：移動。"
 -- (16.11.2026) Blizzard look of both windows
-L["Windows in the game's look"] = "遊戲風格的視窗"
-L["Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload."] = "Dropdon 的視窗看起來就像遊戲本身的視窗：大視窗使用遊戲的外框、按鈕和清單，小視窗則顯示在遊戲提示框的底色上。/reload 之後，選項會在遊戲的設定中開啟（選項 > 插件 > Dropdon）。"
 L["The large window could not be built in the game's look, it opens in the Don look."] = "無法以遊戲風格建立大視窗，改以 Don 風格開啟。"
 -- (16.11.2026) /dd diag: the copy window
 L["Diagnostics"] = "診斷"

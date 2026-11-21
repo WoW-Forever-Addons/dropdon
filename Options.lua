@@ -23,10 +23,12 @@ local PAGES = {
     { key = "panelAlpha", kind = "slider", name = "Background opacity", tip = "How opaque the window background is. Text stays fully visible.", min = 0, max = 1, step = 0.05, onChange = ApplyPanel },
     { key = "combatFade", name = "Dim in combat", tip = "Dims the whole window to 40 % while you are in combat.", onChange = ApplyPanel },
     -- (16.11.2026, Daniel: "Sollte Standart sein", like Luredon 1.7.0) both windows from the game's own templates
-    { key = "blizzLook", name = "Windows in the game's look", tip = "Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload.", onChange = function()
+    -- (20.11.2026, Daniel: the same option in every Don addon) the choice "Window style" with "Don look" / "Blizzard
+    -- look" from DonCore (Settings 6, ns.LookOption, its words in the game's language); the value stays db.blizzLook
+    ns.LookOption({ addon = "Dropdon", onChange = function()
       if ns.WindowReset then ns.WindowReset() end
       if ns.ApplyMiniLook then ns.ApplyMiniLook() end
-    end },
+    end }),
     { kind = "button", name = "Reset position", button = "Reset", tip = "Puts both windows back to their default place.",
       onClick = function() ns.ResetPanelPosition() end },
   } },

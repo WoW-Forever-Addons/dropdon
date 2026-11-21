@@ -127,8 +127,6 @@ L["Mini window"] = "Ventana mini"
 L["All options"] = "Todas las opciones"
 L["Left click: window. Right click: menu. Drag: move."] = "Clic izquierdo: ventana. Clic derecho: menú. Arrastrar: mover."
 -- (16.11.2026) Blizzard look of both windows
-L["Windows in the game's look"] = "Ventanas con el aspecto del juego"
-L["Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload."] = "Las ventanas de Dropdon se ven como las del juego: la ventana grande con el marco, los botones y las listas del juego, la ventana pequeña sobre el fondo de los tooltips del juego. Las opciones se abren entonces en los ajustes del juego (Opciones > AddOns > Dropdon) tras un /reload."
 L["The large window could not be built in the game's look, it opens in the Don look."] = "La ventana grande no se pudo construir con el aspecto del juego, se abre con el aspecto Don."
 -- (16.11.2026) /dd diag: the copy window
 L["Diagnostics"] = "Diagnóstico"

@@ -1,5 +1,10 @@
 # Changes
 
+## 0.12.1
+
+- **One option for the window style:** the switch "Windows in the game's look" is now the choice "Window style" with "Don look" and "Blizzard look", named the same in every Don addon. Your setting stays as it was.
+- **Shared Don library:** updated to the current version of the Don addons.
+
 ## 0.12.0
 
 - **Two new dungeons:** Blackmaw Hold (levels 55-60) and The Shaper's Terrace (58-60) with their quest rewards; their bosses and loot follow as soon as they are known.

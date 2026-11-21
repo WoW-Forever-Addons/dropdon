@@ -127,8 +127,6 @@ L["Mini window"] = "Мини-окно"
 L["All options"] = "Все настройки"
 L["Left click: window. Right click: menu. Drag: move."] = "ЛКМ: окно. ПКМ: меню. Перетаскивание: переместить."
 -- (16.11.2026) Blizzard look of both windows
-L["Windows in the game's look"] = "Окна в стиле игры"
-L["Dropdon's windows look like the game's own: the large window with the game's frame, buttons and lists, the small window on the game's tooltip ground. The options then open in the game's settings (Options > AddOns > Dropdon) after a /reload."] = "Окна Dropdon выглядят как окна самой игры: большое окно с рамкой, кнопками и списками игры, маленькое окно на фоне игровых подсказок. Настройки после /reload открываются в настройках игры (Настройки > Модификации > Dropdon)."
 L["The large window could not be built in the game's look, it opens in the Don look."] = "Большое окно не удалось построить в стиле игры, оно открывается в стиле Don."
 -- (16.11.2026) /dd diag: the copy window
 L["Diagnostics"] = "Диагностика"
