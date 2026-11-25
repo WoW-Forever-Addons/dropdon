@@ -73,13 +73,49 @@ end
 
 function ns.Errors() return errors end
 
-function ns.SafeCall(context, fn, ...)
-  local args, n = { ... }, select("#", ...)
-  local ok, a, b, c = xpcall(function() return fn(unpack(args, 1, n)) end, function(err)
-    pcall(Record, context, err)
-    return err
-  end)
+-- (22.11.2026, Ruckler, DonMonitor) every protected call that takes SLOW_MS or more goes into the global ring DonSlowLog
+-- (60 entries, not saved; DonMonitor's report lists it): addon, context, where the function was registered, ms. Below
+-- the threshold two debugprofilestop calls, no garbage. The game has no debug.getinfo: the place is noted with
+-- debugstack when a listener is registered, for timers only while DonMonitor runs.
+local SLOW_MS, SLOW_MAX = 8, 200 -- (22.11.2026) 8 ms as DonMonitor's hitch threshold; the report sums them up
+local dps = type(debugprofilestop) == "function" and debugprofilestop or nil
+local fnWhere = setmetatable({}, { __mode = "k" })
+local function Where(level)
+  if type(debugstack) ~= "function" then return nil end
+  local ok, stack = pcall(debugstack, level, 6, 0)
+  if not ok or type(stack) ~= "string" then return nil end
+  local first
+  for file, line in stack:gsub("\\", "/"):gmatch('([%w_]+%.lua)["%]]*:(%d+)') do
+    local at = file .. ":" .. line
+    if file ~= "Core.lua" then return at end
+    first = first or at
+  end
+  return first
+end
+local function NoteWhere(fn, level)
+  if type(fn) == "function" and not fnWhere[fn] then fnWhere[fn] = Where(level + 1) end
+end
+local function NoteSlow(context, fn, ms)
+  local log = rawget(_G, "DonSlowLog")
+  if type(log) ~= "table" then log = { n = 0 } DonSlowLog = log end
+  local okT, clock = pcall(date, "%H:%M:%S")
+  log.n = (log.n or 0) + 1
+  log[(log.n - 1) % SLOW_MAX + 1] = { n = log.n, t = okT and clock or "?", a = addonName, c = tostring(context),
+    f = fnWhere[fn] or "?", ms = math.floor(ms * 10 + 0.5) / 10 }
+end
+-- pcall with the arguments directly: no table and no closure per call (was one of each, every event and timer)
+local function Done(context, ok, a, b, c)
   if ok then return a, b, c end
+  pcall(Record, context, a)
+end
+local function SlowDone(context, fn, t0, ...)
+  local ms = dps() - t0
+  if ms >= SLOW_MS then pcall(NoteSlow, context, fn, ms) end
+  return ...
+end
+function ns.SafeCall(context, fn, ...)
+  if not dps then return Done(context, pcall(fn, ...)) end
+  return SlowDone(context, fn, dps(), Done(context, pcall(fn, ...)))
 end
 
 function ns.Guard(context, fn)
@@ -87,6 +123,7 @@ function ns.Guard(context, fn)
 end
 
 function ns.After(delay, fn)
+  if rawget(_G, "DonMonitorDB") then NoteWhere(fn, 2) end
   if C_Timer and C_Timer.After then C_Timer.After(delay, ns.Guard("timer", fn)) end
 end
 
@@ -103,10 +140,11 @@ function ns.On(event, fn)
     if not ok then listeners[event] = nil return false end
   end
   table.insert(listeners[event], fn)
+  NoteWhere(fn, 2)
   return true
 end
 
-function ns.OnInit(fn) table.insert(initCallbacks, fn) end
+function ns.OnInit(fn) NoteWhere(fn, 2) table.insert(initCallbacks, fn) end
 
 frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", function(_, event, ...)
@@ -285,9 +323,10 @@ function ns.DiagLines()
   local f = type(db.filters) == "table" and db.filters or {}
   Add(("Filters: class %s, usable %s, slot %s"):format(YesNo(f.class ~= false), YesNo(f.usable ~= false), tostring(f.slot or "ALL")))
   local _, _, _, why = ns.LookKit()
+  local Opt = LibStub("DonCore-1.0"):Get("Options", 8)
   Add(("Look: large window %s, small window %s, options %s (option says %s)"):format(
     tostring(ns.WindowLook and ns.WindowLook() or "?"), tostring(ns.MiniLook and ns.MiniLook() or "?"),
-    tostring(ns.OptionsLook and ns.OptionsLook() or "?"), tostring(why)))
+    tostring(Opt and Opt.Look() or "?"), tostring(why)))
   if #errors == 0 then
     Add("Errors: none")
   else

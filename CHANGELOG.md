@@ -1,5 +1,11 @@
 # Changes
 
+## 0.13.0
+
+- **More loot:** loot lists of instances were extended with data from the latest sources, nothing was removed. Blackmaw Hold now has its 7 bosses with loot, The Shaper's Terrace its bosses with loot, and Blackrock Depths, Stratholme, Dire Maul and Scholomance have more drops. Item quality colours are filled in too.
+- **Tabs and list headers in the game's look:** group headers in lists are the game's own bars, with plus and minus on the right.
+- **Options open in their own window:** the options button, the cog, the minimap button and `/dd options` open only Dropdon's own options window; the game's AddOns list has just one button leading there. Checkmarks have a light border, and long tooltips sit beside the mouse.
+
 ## 0.12.1
 
 - **One option for the window style:** the switch "Windows in the game's look" is now the choice "Window style" with "Don look" and "Blizzard look", named the same in every Don addon. Your setting stays as it was.

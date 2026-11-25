@@ -13,7 +13,7 @@ local function ApplyPanel() ns.ApplyPanelSettings() end
 
 local PAGES = {
   { title = "Appearance", tip = "Windows: lock, size, background opacity, dim in combat.", items = {
-    { header = "Window" },
+    { header = "Windows" },
     { kind = "button", name = "Large window", button = "Show / hide", tip = "The window with all instances, bosses and their loot. /dd",
       onClick = function() ns.ToggleBig() end, state = function() return ns.BigShown and ns.BigShown() or false end },
     { kind = "button", name = "Small window", button = "Show / hide", tip = "The small window with the bosses of your instance. /dd mini",
@@ -65,32 +65,16 @@ local function Help()
   return table.concat(lines, "\n")
 end
 
--- (16.11.2026, DonCore Settings 3 / Options 6, pattern Luredon/Options.lua) with the option blizzLook the options are the
--- game's own settings pages: built in full at login (only where the client has the templates: without them the
--- windows are Don's and so is the options window), and every cog and /dd options ends there (redirect).
-local fullPages = false
+-- (24.11.2026, DonCore Options 8 / Settings 7) Blizzard's AddOns list gets only a short page with a button to Don's
+-- options window; the options themselves are always that window (showing only Dropdon's tabs).
 local function Build()
-  -- (Options 7) FromSettings hands spec.redirect on to DonCore's options window
-  local spec = { name = "Dropdon", status = Status, tools = TOOLS, pages = PAGES, help = Help,
-    redirect = function() return ns.OpenGameOptions() end }
-  if ns.db and ns.db.blizzLook and select(2, ns.LookKit()) then spec.fullPages, fullPages = true, true end
+  local spec = { name = "Dropdon", status = Status, tools = TOOLS, pages = PAGES, help = Help }
   category = ns.BuildSettings(spec)
 end
-
--- true when the game's settings were opened at Dropdon (option blizzLook, pages built in full at login, not in combat)
-function ns.OpenGameOptions()
-  if not (ns.db and ns.db.blizzLook and fullPages and category and Settings and Settings.OpenToCategory) then return false end
-  if InCombatLockdown and InCombatLockdown() then ns.Print(L["Options cannot be opened in combat."]) return true end
-  Settings.OpenToCategory(category:GetID())
-  return true
-end
--- "game settings" or "don window" (tests, diagnostics)
-function ns.OptionsLook() return fullPages and "game settings" or "don window" end
 
 -- (01.11.2026) DonCore's options window of all Don addons (no Blizzard panel, so also in combat); Blizzard's settings
 -- only when that window is not there (an older DonCore), and those stay closed in combat.
 function ns.OpenOptions()
-  if ns.OpenGameOptions() then return end
   if ns.OpenDonOptions and ns.OpenDonOptions() then return end
   if InCombatLockdown and InCombatLockdown() then
     ns.Print(L["Options cannot be opened in combat."])
